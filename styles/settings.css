@@ -1,0 +1,25 @@
+.selfish-settings-wrap { display: flex; flex-direction: column; gap: 16px; color: #ffffff; padding: 4px; }
+.selfish-card { background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 18px; }
+.selfish-card-title { font-size: 16px; font-weight: 700; margin: 0 0 14px 0; padding-bottom: 10px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); color: #ffffff; }
+.selfish-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+.selfish-row:last-child { border-bottom: none; padding-bottom: 0; }
+.selfish-label { font-size: 13px; color: #b3b3b3; }
+.selfish-btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+.selfish-btn { background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.14); color: #ffffff; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 13px; font-weight: 600; transition: 0.2s ease; }
+.selfish-btn:hover { background: rgba(255, 255, 255, 0.14); }
+.selfish-btn.primary { background: var(--selfish-accent); border-color: var(--selfish-accent); box-shadow: var(--selfish-accent-glow); }
+.selfish-btn.primary:hover { opacity: 0.88; }
+.selfish-radio { cursor: pointer; padding: 7px 14px; border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.14); font-size: 13px; font-weight: 600; color: #ffffff; transition: 0.2s ease; user-select: none; }
+.selfish-radio.active { background: rgba(var(--selfish-accent-rgb), 0.2); border-color: var(--selfish-accent); color: var(--selfish-accent); box-shadow: 0 0 12px rgba(var(--selfish-accent-rgb), 0.25); }
+.selfish-bg-history { display: flex; gap: 10px; overflow-x: auto; padding: 8px 2px 4px 2px; min-height: 58px; align-items: center; }
+.selfish-bg-item { position: relative; flex-shrink: 0; }
+.selfish-bg-item img { width: 74px; height: 46px; border-radius: 8px; object-fit: cover; cursor: pointer; border: 2px solid transparent; transition: 0.2s; display: block; }
+.selfish-bg-item img:hover { border-color: var(--selfish-accent); transform: scale(1.04); }
+.selfish-bg-del { position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%; background: rgba(9, 5, 20, 0.9); border: 1px solid var(--selfish-accent); color: #ffffff; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.selfish-bg-del:hover { background: var(--selfish-accent); }
+.selfish-range { -webkit-appearance: none; width: 100%; height: 6px; border-radius: 4px; background: rgba(255, 255, 255, 0.18); outline: none; cursor: pointer; }
+.selfish-range::-webkit-slider-thumb { -webkit-appearance: none; width: 15px; height: 15px; border-radius: 50%; background: var(--selfish-accent); box-shadow: var(--selfish-accent-glow); cursor: pointer; }
+.selfish-picker-box { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.08); display: flex; flex-direction: column; gap: 10px; }
+.selfish-picker-controls { display: flex; align-items: center; gap: 10px; }
+.selfish-hex-input { background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 10px; color: #ffffff; padding: 6px 10px; font-family: monospace; font-size: 13px; width: 95px; outline: none; }
+.selfish-hex-input:focus { border-color: var(--selfish-accent); }

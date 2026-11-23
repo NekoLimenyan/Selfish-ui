@@ -1,0 +1,135 @@
+:root,
+.encore-dark-theme,
+.encore-dark-theme .encore-base-set {
+    --selfish-bg: #090514;
+    --selfish-glass-bg: rgba(15, 8, 25, 0.55);
+    --selfish-glass-border: rgba(255, 255, 255, 0.1);
+    --selfish-card-bg: rgba(255, 255, 255, 0.04);
+    --selfish-card-hover: rgba(var(--selfish-accent-rgb), 0.14);
+    --selfish-accent: #b026ff;
+    --selfish-accent-rgb: 176, 38, 255;
+    --selfish-accent-glow: 0 0 15px rgba(var(--selfish-accent-rgb), 0.6);
+    --selfish-blur: 20px;
+
+    --spice-text: #ffffff !important;
+    --spice-subtext: #b3b3b3 !important;
+    --spice-main: #090514 !important;
+    --spice-sidebar: transparent !important;
+    --spice-player: transparent !important;
+    --spice-card: rgba(15, 8, 25, 0.75) !important;
+    --spice-button: var(--selfish-accent) !important;
+    --spice-button-active: var(--selfish-accent) !important;
+    --spice-selected-row: var(--selfish-accent) !important;
+
+    --text-base: #ffffff !important;
+    --text-subdued: #b3b3b3 !important;
+    --background-base: #090514 !important;
+    --background-highlight: rgba(255, 255, 255, 0.08) !important;
+    --background-press: rgba(255, 255, 255, 0.14) !important;
+    --background-elevated-base: rgba(18, 10, 32, 0.9) !important;
+    --background-elevated-highlight: rgba(32, 16, 56, 0.94) !important;
+    --essential-bright-accent: var(--selfish-accent) !important;
+    --text-bright-accent: var(--selfish-accent) !important;
+}
+
+@keyframes selfishLiquidBg {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+.Root__top-container {
+    background-color: var(--selfish-bg) !important;
+    background-image: linear-gradient(-45deg, #090514, #15092e, #240c42, #0d0518) !important;
+    background-size: 400% 400% !important;
+    animation: selfishLiquidBg 15s ease infinite !important;
+    gap: 10px !important;
+    padding: 10px !important;
+}
+
+.Root__top-container.has-custom-bg {
+    animation: none !important;
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+}
+
+/* Скляні панелі: розмиття винесено в ::before, щоб не ламати mask-image у текстах */
+.Root__nav-bar,
+.Root__main-view,
+.Root__right-sidebar,
+.Root__now-playing-bar {
+    position: relative !important;
+    isolation: isolate !important;
+    background: transparent !important;
+    border: 1px solid var(--selfish-glass-border) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4) !important;
+}
+
+.Root__nav-bar::before,
+.Root__main-view::before,
+.Root__right-sidebar::before,
+.Root__now-playing-bar::before {
+    content: "" !important;
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: -1 !important;
+    border-radius: inherit !important;
+    background: var(--selfish-glass-bg) !important;
+    backdrop-filter: blur(var(--selfish-blur)) !important;
+    -webkit-backdrop-filter: blur(var(--selfish-blur)) !important;
+    pointer-events: none !important;
+}
+
+.Root__globalNav,
+.main-yourLibraryX-entryPoints,
+.main-yourLibraryX-libraryContainer,
+.main-view-container,
+.main-view-container__scroll-node-child,
+.under-main-view,
+.main-home-homeHeader,
+.main-entityHeader-backgroundColor,
+.main-actionBarBackground-background,
+aside[aria-label] > div,
+.Root__right-sidebar > div,
+.Root__right-sidebar aside,
+.Root__right-sidebar [data-testid="NPV_Panel_OpenDiv"],
+.Root__right-sidebar [data-testid="NPV_Panel_OpenDiv"] > div,
+.Root__right-sidebar [data-testid="NPV_Panel_OpenDiv"] > div > div,
+.Root__right-sidebar .os-host,
+.Root__right-sidebar .os-padding,
+.Root__right-sidebar .os-viewport,
+.Root__right-sidebar .os-content,
+.main-nowPlayingView-content,
+.main-nowPlayingView-gradient,
+.main-nowPlayingView-nowPlayingWidget,
+.main-buddyFeed-container,
+.main-queue-queue {
+    --background-base: transparent !important;
+    --spice-main: transparent !important;
+    --spice-sidebar: transparent !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
+}
+
+.main-card-card,
+.view-homeShortcutsGrid-shortcut,
+[data-testid="NPV_Panel_OpenDiv"] section {
+    background: var(--selfish-card-bg) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: 12px !important;
+    transition: background 0.2s ease, border-color 0.2s ease !important;
+}
+
+.main-card-card:hover,
+.view-homeShortcutsGrid-shortcut:hover {
+    background: var(--selfish-card-hover) !important;
+    border-color: rgba(var(--selfish-accent-rgb), 0.4) !important;
+}
+
+::-webkit-scrollbar { width: 6px !important; height: 6px !important; }
+::-webkit-scrollbar-track { background: transparent !important; }
+::-webkit-scrollbar-thumb { background: rgba(var(--selfish-accent-rgb), 0.35) !important; border-radius: 999px !important; }
+::-webkit-scrollbar-thumb:hover { background: rgba(var(--selfish-accent-rgb), 0.75) !important; }

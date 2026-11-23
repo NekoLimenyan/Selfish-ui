@@ -1,0 +1,95 @@
+/* Фікс бага Chromium: Encore Marquee (span з mask-image та will-change) зникає всередині backdrop-filter */
+.Root__now-playing-bar *,
+.Root__right-sidebar * {
+    -webkit-mask-image: none !important;
+    mask-image: none !important;
+    will-change: auto !important;
+}
+
+/* Жорстка фіксація кольору тексту та ніків у правій панелі й плеєрі */
+.Root__right-sidebar {
+    --text-base: #ffffff !important;
+    --text-subdued: #b3b3b3 !important;
+}
+
+[data-testid="now-playing-widget"] a,
+[data-testid="context-item-info-title"],
+[data-testid="context-item-info-title"] a,
+.main-trackInfo-name,
+.main-trackInfo-name a,
+.main-nowPlayingWidget-trackInfo a,
+.Root__right-sidebar header a,
+.Root__right-sidebar header span {
+    color: #ffffff !important;
+    opacity: 1 !important;
+}
+
+[data-testid="context-item-info-subtitles"],
+[data-testid="context-item-info-subtitles"] a,
+.main-trackInfo-artists,
+.main-trackInfo-artists a {
+    color: #b3b3b3 !important;
+    opacity: 1 !important;
+}
+
+/* Відновлення іконки Play/Pause всередині білої кнопки */
+.encore-inverted-light-set,
+[data-testid="control-button-playpause"] {
+    --background-base: #ffffff !important;
+    --background-highlight: #f0f0f0 !important;
+    --text-base: #090514 !important;
+    --essential-base: #090514 !important;
+    background-color: #ffffff !important;
+    color: #090514 !important;
+    box-shadow: var(--selfish-accent-glow) !important;
+}
+
+[data-testid="control-button-playpause"] svg {
+    fill: #090514 !important;
+    color: #090514 !important;
+}
+
+/* Відновлення тексту та іконок на акцентних кнопках */
+.encore-bright-accent-set {
+    --background-base: var(--selfish-accent) !important;
+    --background-highlight: var(--selfish-accent) !important;
+    --text-base: #ffffff !important;
+    --essential-base: #ffffff !important;
+    background-color: var(--selfish-accent) !important;
+    color: #ffffff !important;
+    box-shadow: var(--selfish-accent-glow) !important;
+}
+
+.encore-bright-accent-set span,
+.encore-bright-accent-set svg {
+    color: #ffffff !important;
+    fill: #ffffff !important;
+}
+
+/* Видимість кнопок у верхній панелі та нижньому плеєрі */
+.Root__globalNav button,
+.main-topBar-button,
+.player-controls__buttons button:not([data-testid="control-button-playpause"]),
+.main-nowPlayingBar-extraControls button {
+    color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.Root__globalNav button:hover,
+.main-topBar-button:hover,
+.player-controls__buttons button:not([data-testid="control-button-playpause"]):hover,
+.main-nowPlayingBar-extraControls button:hover {
+    color: #ffffff !important;
+}
+
+button[role="checkbox"][aria-checked="true"] > span,
+.ChipInnerComponent-selected {
+    background-color: var(--selfish-accent) !important;
+    color: #ffffff !important;
+    box-shadow: var(--selfish-accent-glow) !important;
+}
+
+.playback-bar__progress-time-elapsed,
+[data-testid="progress-bar"] [data-testid="progress-bar-background"] > div > div {
+    background-color: var(--selfish-accent) !important;
+    box-shadow: var(--selfish-accent-glow) !important;
+}

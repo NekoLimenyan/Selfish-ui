@@ -1,0 +1,9 @@
+# OS & Editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.log
+
+# Keep user.css and theme.js tracked for Spicetify Marketplace
