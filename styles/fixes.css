@@ -32,7 +32,7 @@
     opacity: 1 !important;
 }
 
-/* Відновлення іконки Play/Pause всередині білої кнопки */
+/* Відновлення іконок усередині всіх білих інвертованих кнопок (Play/Pause, Marketplace, стрілки фільтрів) */
 .encore-inverted-light-set,
 [data-testid="control-button-playpause"] {
     --background-base: #ffffff !important;
@@ -60,10 +60,11 @@
     box-shadow: var(--selfish-accent-glow) !important;
 }
 
-.encore-bright-accent-set span,
-.encore-bright-accent-set svg {
-    color: #ffffff !important;
-    fill: #ffffff !important;
+.encore-inverted-light-set svg,
+.encore-inverted-light-set span,
+[data-testid="control-button-playpause"] svg {
+    fill: #090514 !important;
+    color: #090514 !important;
 }
 
 /* Видимість кнопок у верхній панелі та нижньому плеєрі */
