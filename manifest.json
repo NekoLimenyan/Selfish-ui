@@ -6,7 +6,9 @@
     "usercss": "user.css",
     "readme": "README.md",
     "schemes": "color.ini",
-    "include": ["theme.js"],
+    "include": [
+      "https://raw.githubusercontent.com/NekoLimenyan/Selfish-ui/main/theme.js"
+    ],
     "branch": "main",
     "tags": ["glassmorphism", "dark", "purple", "visualizer", "custom-background", "transparent"],
     "authors": [
