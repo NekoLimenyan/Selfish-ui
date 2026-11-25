@@ -5,14 +5,19 @@
 .encore-dark-theme,
 .encore-dark-theme .encore-base-set {
     --selfish-bg: #090514;
-    --selfish-glass-bg: rgba(15, 8, 25, 0.55);
-    --selfish-glass-border: rgba(255, 255, 255, 0.1);
-    --selfish-card-bg: rgba(255, 255, 255, 0.04);
-    --selfish-card-hover: rgba(var(--selfish-accent-rgb), 0.14);
+    --selfish-glass-bg: rgba(15, 8, 25, 0.56);
+    --selfish-glass-border: rgba(255, 255, 255, 0.11);
+    --selfish-card-bg: rgba(255, 255, 255, 0.045);
+    --selfish-card-hover: rgba(var(--selfish-accent-rgb), 0.15);
     --selfish-accent: #b026ff;
+    --selfish-accent-2: #ff2a85;
+    --selfish-accent-bg: #b026ff;
     --selfish-accent-rgb: 176, 38, 255;
+    --selfish-accent-2-rgb: 255, 42, 133;
     --selfish-accent-glow: 0 0 15px rgba(var(--selfish-accent-rgb), 0.6);
     --selfish-blur: 20px;
+    --selfish-backdrop: blur(20px);
+    --panel-gap: 10px !important;
 
     --spice-text: #ffffff !important;
     --spice-subtext: #b3b3b3 !important;
@@ -29,8 +34,8 @@
     --background-base: #090514 !important;
     --background-highlight: rgba(255, 255, 255, 0.08) !important;
     --background-press: rgba(255, 255, 255, 0.14) !important;
-    --background-elevated-base: rgba(18, 10, 32, 0.9) !important;
-    --background-elevated-highlight: rgba(32, 16, 56, 0.94) !important;
+    --background-elevated-base: rgba(18, 10, 32, 0.92) !important;
+    --background-elevated-highlight: rgba(32, 16, 56, 0.95) !important;
     --essential-bright-accent: var(--selfish-accent) !important;
     --text-bright-accent: var(--selfish-accent) !important;
 }
@@ -42,34 +47,87 @@
 }
 
 .Root__top-container {
+    position: relative !important;
+    isolation: isolate !important;
     background-color: var(--selfish-bg) !important;
     background-image: linear-gradient(-45deg, #090514, #15092e, #240c42, #0d0518) !important;
     background-size: 400% 400% !important;
     animation: selfishLiquidBg 15s ease infinite !important;
+    --panel-gap: 10px !important;
     gap: 10px !important;
     padding: 10px !important;
 }
 
 .Root__top-container.has-custom-bg {
     animation: none !important;
+    background-image: none !important;
+    background-color: var(--selfish-bg) !important;
+}
+
+#selfish-bg-stage {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: -1 !important;
+    background-color: var(--selfish-bg) !important;
+    pointer-events: none !important;
+    overflow: hidden !important;
+    transform: translate3d(0, 0, 0) !important;
+}
+
+.selfish-bg-slide {
+    position: absolute !important;
+    inset: 0 !important;
     background-size: cover !important;
     background-position: center !important;
     background-repeat: no-repeat !important;
+    opacity: 0;
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    will-change: opacity;
 }
 
-/* Скляні панелі: розмиття винесено в ::before, щоб не ламати mask-image у текстах */
+/* Скляні плити: overflow: visible на вертикальних панелях прибирає перерахунок маски blur при ресайзі */
 .Root__nav-bar,
 .Root__main-view,
-.Root__right-sidebar,
-.Root__now-playing-bar {
+.Root__right-sidebar {
+    --background-base: transparent !important;
+    --spice-main: transparent !important;
+    --spice-sidebar: transparent !important;
+    box-sizing: border-box !important;
     position: relative !important;
     isolation: isolate !important;
+    min-width: 0 !important;
+    overflow: visible !important;
     background: transparent !important;
     border: 1px solid var(--selfish-glass-border) !important;
     border-radius: 16px !important;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4) !important;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease !important;
 }
 
+.Root__now-playing-bar {
+    --background-base: transparent !important;
+    --spice-main: transparent !important;
+    --spice-sidebar: transparent !important;
+    box-sizing: border-box !important;
+    position: relative !important;
+    isolation: isolate !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    background: transparent !important;
+    border: 1px solid var(--selfish-glass-border) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4) !important;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease !important;
+}
+
+body.selfish-resizing .Root__nav-bar,
+body.selfish-resizing .Root__main-view,
+body.selfish-resizing .Root__right-sidebar {
+    transition: none !important;
+}
+
+/* Основний шар матового скла: contain ізолює його від внутрішніх перебудов тексту при ресайзі */
 .Root__nav-bar::before,
 .Root__main-view::before,
 .Root__right-sidebar::before,
@@ -80,11 +138,56 @@
     z-index: -1 !important;
     border-radius: inherit !important;
     background: var(--selfish-glass-bg) !important;
-    backdrop-filter: blur(var(--selfish-blur)) !important;
-    -webkit-backdrop-filter: blur(var(--selfish-blur)) !important;
+    backdrop-filter: blur(var(--selfish-blur)) saturate(var(--selfish-glass-sat, 115%)) !important;
+    -webkit-backdrop-filter: blur(var(--selfish-blur)) saturate(var(--selfish-glass-sat, 115%)) !important;
+    contain: layout paint style !important;
     pointer-events: none !important;
 }
 
+/* Оптичний фацет та внутрішні каустики скла */
+.Root__nav-bar::after,
+.Root__main-view::after,
+.Root__right-sidebar::after,
+.Root__now-playing-bar::after {
+    content: "" !important;
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: 2 !important;
+    border-radius: inherit !important;
+    background:
+        radial-gradient(
+            120% 75% at 12% 0%,
+            rgba(255, 255, 255, var(--selfish-refraction-caustic, 0)) 0%,
+            transparent 58%
+        ),
+        linear-gradient(
+            135deg,
+            rgba(var(--selfish-accent-rgb), var(--selfish-refraction-dispersion, 0)) 0%,
+            transparent 35%,
+            transparent 68%,
+            rgba(var(--selfish-accent-2-rgb), var(--selfish-refraction-dispersion, 0)) 100%
+        ) !important;
+    box-shadow:
+        inset 0 1px 0 var(--selfish-refraction-rim, rgba(255, 255, 255, 0.08)),
+        inset 1px 0 0 rgba(255, 255, 255, calc(var(--selfish-refraction-caustic, 0) * 0.65)),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.28) !important;
+    contain: layout paint style !important;
+    pointer-events: none !important;
+}
+
+/* Обрізаємо внутрішній контент за заокругленнями на дочірніх контейнерах */
+.Root__nav-bar > nav,
+.Root__main-view > .main-view-container,
+.Root__right-sidebar > aside,
+.Root__right-sidebar > [data-testid="NPV_Panel_OpenDiv"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    overflow: hidden !important;
+    border-radius: inherit !important;
+}
+
+/* Очищаємо всі вбудовані градієнти та липкі підкладки всередині панелей */
 .Root__globalNav,
 .main-yourLibraryX-entryPoints,
 .main-yourLibraryX-libraryContainer,
@@ -95,11 +198,12 @@
 .main-entityHeader-backgroundColor,
 .main-actionBarBackground-background,
 aside[aria-label] > div,
-.Root__right-sidebar > div,
+aside[aria-label] header,
 .Root__right-sidebar aside,
+.Root__right-sidebar aside header,
+.Root__right-sidebar [class*="nowPlayingView-header"],
 .Root__right-sidebar [data-testid="NPV_Panel_OpenDiv"],
-.Root__right-sidebar [data-testid="NPV_Panel_OpenDiv"] > div,
-.Root__right-sidebar [data-testid="NPV_Panel_OpenDiv"] > div > div,
+.Root__right-sidebar [data-testid="NPV_Panel_OpenDiv"] div:not([class*="section"]):not([data-testid="credits-card"]),
 .Root__right-sidebar .os-host,
 .Root__right-sidebar .os-padding,
 .Root__right-sidebar .os-viewport,
@@ -117,33 +221,92 @@ aside[aria-label] > div,
     background-image: none !important;
 }
 
+.Root__right-sidebar [data-testid="NPV_Panel_OpenDiv"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+}
+
 .main-card-card,
 .view-homeShortcutsGrid-shortcut,
 [data-testid="NPV_Panel_OpenDiv"] section {
     background: var(--selfish-card-bg) !important;
     border: 1px solid rgba(255, 255, 255, 0.06) !important;
     border-radius: 12px !important;
-    transition: background 0.2s ease, border-color 0.2s ease !important;
+    transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), background 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease !important;
 }
 
 .main-card-card:hover,
 .view-homeShortcutsGrid-shortcut:hover {
-    background: var(--selfish-card-hover) !important;
-    border-color: rgba(var(--selfish-accent-rgb), 0.4) !important;
+    background: linear-gradient(135deg, rgba(var(--selfish-accent-rgb), 0.16), rgba(var(--selfish-accent-2-rgb), 0.12)) !important;
+    border-color: rgba(var(--selfish-accent-rgb), 0.45) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25) !important;
 }
 
-::-webkit-scrollbar { width: 6px !important; height: 6px !important; }
-::-webkit-scrollbar-track { background: transparent !important; }
-::-webkit-scrollbar-thumb { background: rgba(var(--selfish-accent-rgb), 0.35) !important; border-radius: 999px !important; }
-::-webkit-scrollbar-thumb:hover { background: rgba(var(--selfish-accent-rgb), 0.75) !important; }
+/* Акуратний скролбар без темної смужки по краю панелі */
+::-webkit-scrollbar {
+    width: 5px !important;
+    height: 5px !important;
+}
+
+::-webkit-scrollbar-track,
+.os-scrollbar-track {
+    background: transparent !important;
+}
+
+::-webkit-scrollbar-thumb,
+.os-scrollbar-handle {
+    background: var(--selfish-accent-bg, rgba(var(--selfish-accent-rgb), 0.45)) !important;
+    border-radius: 999px !important;
+}
+
+::-webkit-scrollbar-thumb:hover,
+.os-scrollbar-handle:hover {
+    filter: brightness(1.15);
+}
 
 /* === fixes.css === */
-/* Фікс бага Chromium: Encore Marquee (span з mask-image та will-change) зникає всередині backdrop-filter */
+/* Фікс бага Chromium: прибираємо mask-image для тексту, але залишаємо GPU-шари скролу в правій панелі */
 .Root__now-playing-bar *,
 .Root__right-sidebar * {
     -webkit-mask-image: none !important;
     mask-image: none !important;
+}
+
+.Root__now-playing-bar [class*="marquee"],
+.Root__right-sidebar [class*="marquee"] {
     will-change: auto !important;
+}
+
+/* Прибираємо різке миготіння стандартної білої лінії перетягування у проміжку між плитами */
+[class*="LayoutResizer__resize-bar"]::after {
+    background-color: rgba(var(--selfish-accent-rgb), 0.45) !important;
+    width: 2px !important;
+    border-radius: 999px !important;
+    transition: opacity 0.15s ease !important;
+}
+
+/* Тонка лінія 2px по центру зазору при наведенні/перетягуванні межі панелей */
+.LayoutResizer__resize-bar {
+    background-color: transparent !important;
+    background-image: none !important;
+    opacity: 0 !important;
+    transition: opacity 0.18s ease !important;
+}
+
+.LayoutResizer__resize-bar:hover,
+.LayoutResizer__resize-bar:active,
+.LayoutResizer__resize-bar--active {
+    opacity: 1 !important;
+    background-color: transparent !important;
+    background-image: linear-gradient(
+        to right,
+        transparent calc(50% - 1px),
+        var(--selfish-accent) calc(50% - 1px),
+        var(--selfish-accent) calc(50% + 1px),
+        transparent calc(50% + 1px)
+    ) !important;
 }
 
 /* Жорстка фіксація кольору тексту та ніків у правій панелі й плеєрі */
@@ -172,9 +335,10 @@ aside[aria-label] > div,
     opacity: 1 !important;
 }
 
-/* Відновлення іконки Play/Pause всередині білої кнопки */
+/* Відновлення іконок усередині всіх білих кнопок (плеєр, картки, Marketplace) */
 .encore-inverted-light-set,
-[data-testid="control-button-playpause"] {
+[data-testid="control-button-playpause"],
+.marketplace-card button:not(.encore-bright-accent-set) {
     --background-base: #ffffff !important;
     --background-highlight: #f0f0f0 !important;
     --text-base: #090514 !important;
@@ -182,28 +346,81 @@ aside[aria-label] > div,
     background-color: #ffffff !important;
     color: #090514 !important;
     box-shadow: var(--selfish-accent-glow) !important;
+    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s ease !important;
 }
 
-[data-testid="control-button-playpause"] svg {
+.encore-inverted-light-set:hover,
+[data-testid="control-button-playpause"]:hover,
+.marketplace-card button:not(.encore-bright-accent-set):hover {
+    transform: scale(1.06);
+}
+
+.encore-inverted-light-set svg,
+.encore-inverted-light-set path,
+.encore-inverted-light-set span,
+[data-testid="control-button-playpause"] svg,
+[data-testid="control-button-playpause"] path,
+.marketplace-card button:not(.encore-bright-accent-set) svg,
+.marketplace-card button:not(.encore-bright-accent-set) path {
     fill: #090514 !important;
     color: #090514 !important;
 }
 
-/* Відновлення тексту та іконок на акцентних кнопках */
+/* Акцентні кнопки */
 .encore-bright-accent-set {
     --background-base: var(--selfish-accent) !important;
     --background-highlight: var(--selfish-accent) !important;
     --text-base: #ffffff !important;
     --essential-base: #ffffff !important;
-    background-color: var(--selfish-accent) !important;
+    background: var(--selfish-accent-bg, var(--selfish-accent)) !important;
     color: #ffffff !important;
+    box-shadow: var(--selfish-accent-glow) !important;
+    transition: transform 0.18s ease, box-shadow 0.22s ease, opacity 0.2s ease !important;
+}
+
+/* Чипси фільтрів («Усе», «Музика», «Плейлісти»): округлі межі без прямокутного ореолу */
+button[role="checkbox"],
+[data-encore-id="chip"] {
+    border-radius: 999px !important;
+    overflow: visible !important;
+    background: transparent !important;
+}
+
+button[role="checkbox"][aria-checked="true"] > span,
+button[role="checkbox"][aria-checked="true"] > div,
+.ChipInnerComponent-selected,
+[data-encore-id="chip"][aria-checked="true"] > span {
+    border-radius: 999px !important;
+    background: var(--selfish-accent-bg, var(--selfish-accent)) !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 12px rgba(var(--selfish-accent-rgb), 0.45) !important;
+}
+
+/* Порожня шкала прогресу та гучності */
+[data-testid="progress-bar"] [data-testid="progress-bar-background"],
+[data-testid="progress-bar"] [data-testid="progress-bar-background"] > div,
+[data-testid="volume-bar"] [data-testid="progress-bar-background"],
+[data-testid="volume-bar"] [data-testid="progress-bar-background"] > div {
+    background: rgba(255, 255, 255, 0.18) !important;
+    box-shadow: none !important;
+}
+
+/* Заповнена частина треку та гучності з підтримкою градієнта */
+.playback-bar__progress-time-elapsed,
+[data-testid="progress-bar"] [data-testid="progress-bar-background"] > div > div,
+[data-testid="volume-bar"] [data-testid="progress-bar-background"] > div > div {
+    background: var(--selfish-accent-bg, var(--selfish-accent)) !important;
     box-shadow: var(--selfish-accent-glow) !important;
 }
 
-.encore-bright-accent-set span,
-.encore-bright-accent-set svg {
-    color: #ffffff !important;
-    fill: #ffffff !important;
+/* Градієнтний текст для активного плейлиста та треку в режимі «Градієнт» */
+html.selfish-gradient-mode .main-yourLibraryX-listItem [aria-current="page"] p,
+html.selfish-gradient-mode .main-yourLibraryX-listItem [aria-current="page"] span[data-encore-id="text"],
+html.selfish-gradient-mode .main-trackList-trackListRow.main-trackList-active .main-trackList-rowTitle {
+    background-image: var(--selfish-accent-bg) !important;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
 }
 
 /* Видимість кнопок у верхній панелі та нижньому плеєрі */
@@ -212,6 +429,7 @@ aside[aria-label] > div,
 .player-controls__buttons button:not([data-testid="control-button-playpause"]),
 .main-nowPlayingBar-extraControls button {
     color: rgba(255, 255, 255, 0.85) !important;
+    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), color 0.18s ease, background 0.18s ease !important;
 }
 
 .Root__globalNav button:hover,
@@ -219,93 +437,905 @@ aside[aria-label] > div,
 .player-controls__buttons button:not([data-testid="control-button-playpause"]):hover,
 .main-nowPlayingBar-extraControls button:hover {
     color: #ffffff !important;
+    transform: scale(1.06);
 }
 
-button[role="checkbox"][aria-checked="true"] > span,
-.ChipInnerComponent-selected {
-    background-color: var(--selfish-accent) !important;
+/* Плавні переходи для рядків треків, бібліотеки та обкладинок */
+.main-trackList-trackListRow,
+.main-yourLibraryX-listItem,
+[data-encore-id="chip"] {
+    transition: background-color 0.18s ease, transform 0.18s ease, border-color 0.18s ease !important;
+}
+
+.main-card-imageContainer img,
+.view-homeShortcutsGrid-imageWrapper img {
+    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+.main-card-card:hover .main-card-imageContainer img,
+.view-homeShortcutsGrid-shortcut:hover .view-homeShortcutsGrid-imageWrapper img {
+    transform: scale(1.04);
+}
+
+/* Скляні капсули верхньої панелі */
+[data-testid="global-nav-bar"] button:not([data-testid="user-widget-link"]):not(form[role="search"] button),
+.Root__globalNav button:not([data-testid="user-widget-link"]):not(form[role="search"] button),
+.main-topBar-button {
+    background: rgba(18, 12, 32, 0.58) !important;
+    backdrop-filter: blur(14px) saturate(130%) !important;
+    -webkit-backdrop-filter: blur(14px) saturate(130%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+    border-radius: 50% !important;
+    overflow: hidden !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
     color: #ffffff !important;
-    box-shadow: var(--selfish-accent-glow) !important;
 }
 
-.playback-bar__progress-time-elapsed,
-[data-testid="progress-bar"] [data-testid="progress-bar-background"] > div > div {
-    background-color: var(--selfish-accent) !important;
-    box-shadow: var(--selfish-accent-glow) !important;
+/* Рівні круглі пропорції для стрілок навігації < та > */
+[data-testid="top-bar-back-button"],
+[data-testid="top-bar-forward-button"],
+.main-topBar-historyButtons button {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 50% !important;
+}
+
+.main-topBar-historyButtons {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+}
+
+[data-testid="global-nav-bar"] button:not([data-testid="user-widget-link"]):not(form[role="search"] button):hover,
+.Root__globalNav button:not([data-testid="user-widget-link"]):not(form[role="search"] button):hover,
+.main-topBar-button:hover {
+    background: rgba(32, 22, 54, 0.72) !important;
+    border-color: rgba(255, 255, 255, 0.28) !important;
+}
+
+/* Поле пошуку у скляному стилі */
+[data-testid="global-nav-bar"] form[role="search"],
+.main-globalNav-searchInputContainer {
+    background: rgba(18, 12, 32, 0.58) !important;
+    backdrop-filter: blur(14px) saturate(130%) !important;
+    -webkit-backdrop-filter: blur(14px) saturate(130%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+    border-radius: 999px !important;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+[data-testid="global-nav-bar"] form[role="search"]:focus-within,
+.main-globalNav-searchInputContainer:focus-within {
+    border-color: var(--selfish-accent) !important;
+    box-shadow: 0 0 14px rgba(var(--selfish-accent-rgb), 0.35) !important;
+}
+
+/* Другий шар скла для карток у правій панелі («Відомості», «Наступне в черзі») */
+.Root__right-sidebar .main-nowPlayingView-section,
+.Root__right-sidebar [class*="nowPlayingView-section"],
+.Root__right-sidebar [data-testid="credits-card"],
+aside[aria-label] .main-nowPlayingView-section,
+aside[aria-label] [class*="nowPlayingView-section"] {
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.065), rgba(16, 10, 28, 0.42)) !important;
+    border: 1px solid rgba(255, 255, 255, 0.11) !important;
+    border-radius: 14px !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 4px 16px rgba(0, 0, 0, 0.22) !important;
+}
+
+/* Піднімаємо верхню навігацію над центральною та бічними плитами */
+.Root__globalNav,
+[data-testid="global-nav-bar"] {
+    position: relative !important;
+    z-index: 100 !important;
+}
+
+/* Скляна підкладка для випадаючого списку пошуку («Останні пошукові запити») */
+.Root__globalNav form[role="search"] > div:has(ul),
+.Root__globalNav form[role="search"] > div:has([role="list"]),
+.Root__globalNav form[role="search"] > div:has([role="grid"]),
+.Root__globalNav form[role="search"] > div:has([role="listbox"]),
+.Root__globalNav [data-encore-id="popover"],
+[data-tippy-root] > div:has(ul),
+[data-tippy-root] > div:has([role="listbox"]),
+[data-tippy-root] > div:has([role="grid"]) {
+    --background-base: rgba(16, 10, 30, 0.94) !important;
+    --background-elevated-base: rgba(16, 10, 30, 0.94) !important;
+    --background-highlight: rgba(255, 255, 255, 0.09) !important;
+    background: linear-gradient(160deg, rgba(22, 13, 40, 0.92), rgba(11, 7, 22, 0.96)) !important;
+    backdrop-filter: blur(28px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(160%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.16) !important;
+    border-radius: 18px !important;
+    box-shadow:
+        0 24px 60px rgba(0, 0, 0, 0.85),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+    z-index: 9999 !important;
+}
+
+/* Прибираємо подвійну рамку у вкладених списків */
+.Root__globalNav form[role="search"] ul,
+.Root__globalNav form[role="search"] [role="listbox"],
+[data-tippy-root] [role="listbox"] {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
 }
 
 /* === settings.css === */
-.selfish-settings-wrap { display: flex; flex-direction: column; gap: 16px; color: #ffffff; padding: 4px; }
-.selfish-card { background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 18px; }
-.selfish-card-title { font-size: 16px; font-weight: 700; margin: 0 0 14px 0; padding-bottom: 10px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); color: #ffffff; }
-.selfish-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
-.selfish-row:last-child { border-bottom: none; padding-bottom: 0; }
-.selfish-label { font-size: 13px; color: #b3b3b3; }
-.selfish-btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
-.selfish-btn { background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.14); color: #ffffff; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 13px; font-weight: 600; transition: 0.2s ease; }
-.selfish-btn:hover { background: rgba(255, 255, 255, 0.14); }
-.selfish-btn.primary { background: var(--selfish-accent); border-color: var(--selfish-accent); box-shadow: var(--selfish-accent-glow); }
-.selfish-btn.primary:hover { opacity: 0.88; }
-.selfish-radio { cursor: pointer; padding: 7px 14px; border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.14); font-size: 13px; font-weight: 600; color: #ffffff; transition: 0.2s ease; user-select: none; }
-.selfish-radio.active { background: rgba(var(--selfish-accent-rgb), 0.2); border-color: var(--selfish-accent); color: var(--selfish-accent); box-shadow: 0 0 12px rgba(var(--selfish-accent-rgb), 0.25); }
-.selfish-bg-history { display: flex; gap: 10px; overflow-x: auto; padding: 8px 2px 4px 2px; min-height: 58px; align-items: center; }
-.selfish-bg-item { position: relative; flex-shrink: 0; }
-.selfish-bg-item img { width: 74px; height: 46px; border-radius: 8px; object-fit: cover; cursor: pointer; border: 2px solid transparent; transition: 0.2s; display: block; }
-.selfish-bg-item img:hover { border-color: var(--selfish-accent); transform: scale(1.04); }
-.selfish-bg-del { position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%; background: rgba(9, 5, 20, 0.9); border: 1px solid var(--selfish-accent); color: #ffffff; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-.selfish-bg-del:hover { background: var(--selfish-accent); }
-.selfish-range { -webkit-appearance: none; width: 100%; height: 6px; border-radius: 4px; background: rgba(255, 255, 255, 0.18); outline: none; cursor: pointer; }
-.selfish-range::-webkit-slider-thumb { -webkit-appearance: none; width: 15px; height: 15px; border-radius: 50%; background: var(--selfish-accent); box-shadow: var(--selfish-accent-glow); cursor: pointer; }
-.selfish-picker-box { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.08); display: flex; flex-direction: column; gap: 10px; }
-.selfish-picker-controls { display: flex; align-items: center; gap: 10px; }
-.selfish-hex-input { background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 10px; color: #ffffff; padding: 6px 10px; font-family: monospace; font-size: 13px; width: 95px; outline: none; }
-.selfish-hex-input:focus { border-color: var(--selfish-accent); }
-
-/* === fullscreen.css === */
-#selfish-fs-overlay { position: fixed; inset: 0; width: 100vw; height: 100vh; background-color: rgba(5, 2, 10, 0.72); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; opacity: 1; transition: opacity 0.4s ease; overflow: hidden; user-select: none; }
-#selfish-fs-overlay.hidden { opacity: 0; pointer-events: none; }
-#selfish-fs-overlay::before { content: ''; position: absolute; inset: 0; backdrop-filter: blur(var(--selfish-blur)); -webkit-backdrop-filter: blur(var(--selfish-blur)); z-index: -1; }
-#selfish-fs-bg { position: absolute; top: -10%; left: -10%; width: 120%; height: 120%; background-size: cover; background-position: center; filter: blur(80px) brightness(0.45); z-index: -2; opacity: 0.92; animation: selfishSlowPan 20s infinite alternate linear; }
-
-@keyframes selfishSlowPan {
-    0% { transform: scale(1) translate(0, 0); }
-    100% { transform: scale(1.1) translate(-2%, 2%); }
+/* Прозорість внутрішніх контейнерів модального вікна Spotify */
+.GenericModal:has(.selfish-settings-wrap),
+.GenericModal:has(.selfish-settings-wrap) .main-trackCreditsModal-container,
+.GenericModal:has(.selfish-settings-wrap) .main-trackCreditsModal-mainSection,
+[role="dialog"]:has(.selfish-settings-wrap) {
+    background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: 88vh !important;
 }
 
-#selfish-fs-close { position: absolute; top: 28px; right: 32px; width: 42px; height: 42px; border-radius: 50%; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); color: #ffffff; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; transition: opacity 0.8s ease, transform 0.3s ease, background 0.2s ease; }
-#selfish-fs-close:hover { background: var(--fs-accent, var(--selfish-accent)); transform: scale(1.08); }
-.selfish-fs-container { display: flex; align-items: center; justify-content: center; gap: 6vw; width: 85%; max-width: 1350px; z-index: 5; }
-.selfish-fs-cover-wrap { flex-shrink: 0; animation: selfishFloatingCover 6s ease-in-out infinite; }
+.GenericModal:has(.selfish-settings-wrap) .main-trackCreditsModal-container {
+    background: linear-gradient(160deg, rgba(20, 12, 36, 0.72), rgba(10, 6, 20, 0.82)) !important;
+    backdrop-filter: blur(32px) saturate(155%) !important;
+    -webkit-backdrop-filter: blur(32px) saturate(155%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.16) !important;
+    border-radius: 26px !important;
+    box-shadow:
+        0 28px 70px rgba(0, 0, 0, 0.75),
+        inset 0 1px 0 rgba(255, 255, 255, 0.14),
+        0 0 36px rgba(var(--selfish-accent-rgb), 0.16) !important;
+    overflow: hidden !important;
+    width: min(560px, 92vw) !important;
+}
+
+/* Шапка модалки */
+.GenericModal:has(.selfish-settings-wrap) .main-trackCreditsModal-header {
+    padding: 18px 22px 10px 22px !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
+    background: transparent !important;
+}
+
+.GenericModal:has(.selfish-settings-wrap) .main-trackCreditsModal-header h1 {
+    font-size: 19px !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.2px !important;
+    color: #ffffff !important;
+}
+
+.GenericModal:has(.selfish-settings-wrap) .main-trackCreditsModal-closeBtn {
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 50% !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    color: #ffffff !important;
+    transition: transform 0.18s ease, background 0.18s ease !important;
+}
+
+.GenericModal:has(.selfish-settings-wrap) .main-trackCreditsModal-closeBtn:hover {
+    background: rgba(255, 255, 255, 0.16) !important;
+    transform: scale(1.06);
+}
+
+.GenericModal:has(.selfish-settings-wrap) .main-trackCreditsModal-mainSection {
+    padding: 14px 20px 20px 20px !important;
+}
+
+/* Основний контейнер налаштувань */
+.selfish-settings-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    color: #ffffff;
+}
+
+.selfish-card {
+    background: linear-gradient(155deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.02));
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 15px 16px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+.selfish-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.selfish-card-title {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 13.5px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    margin: 0;
+    color: #ffffff;
+}
+
+.selfish-title-badge {
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(var(--selfish-accent-rgb), 0.18);
+    border: 1px solid rgba(var(--selfish-accent-rgb), 0.35);
+    color: var(--selfish-accent);
+    flex-shrink: 0;
+}
+
+/* Картки вибору джерела фону */
+.selfish-mode-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.selfish-mode-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: rgba(0, 0, 0, 0.26);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+    user-select: none;
+}
+
+.selfish-mode-card:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.selfish-mode-card.active {
+    background: linear-gradient(135deg, rgba(var(--selfish-accent-rgb), 0.22), rgba(var(--selfish-accent-2-rgb), 0.14));
+    border-color: var(--selfish-accent);
+    box-shadow: 0 4px 16px rgba(var(--selfish-accent-rgb), 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+.selfish-mode-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.07);
+    color: rgba(255, 255, 255, 0.75);
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+}
+
+.selfish-mode-card.active .selfish-mode-icon {
+    background: var(--selfish-accent-bg, var(--selfish-accent));
+    color: #ffffff;
+    box-shadow: var(--selfish-accent-glow);
+}
+
+.selfish-mode-text {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+
+.selfish-mode-name {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.selfish-mode-desc {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.55);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Блок завантаження та галереї фонів */
+.selfish-bg-drawer {
+    background: rgba(0, 0, 0, 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 14px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    transition: opacity 0.2s ease;
+}
+
+.selfish-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.selfish-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.72);
+}
+
+.selfish-btn-group {
+    display: flex;
+    gap: 7px;
+}
+
+.selfish-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: #ffffff;
+    padding: 6px 13px;
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: transform 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+}
+
+.selfish-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-1px);
+}
+
+.selfish-btn.primary {
+    background: var(--selfish-accent-bg, var(--selfish-accent));
+    border-color: transparent;
+    box-shadow: var(--selfish-accent-glow);
+}
+
+.selfish-btn.primary:hover {
+    filter: brightness(1.08);
+}
+
+.selfish-bg-history {
+    display: flex;
+    gap: 9px;
+    overflow-x: auto;
+    padding: 8px 2px 2px 2px;
+    min-height: 54px;
+    align-items: center;
+}
+
+.selfish-bg-item {
+    position: relative;
+    flex-shrink: 0;
+    border-radius: 10px;
+}
+
+.selfish-bg-item img {
+    width: 74px;
+    height: 46px;
+    border-radius: 10px;
+    object-fit: cover;
+    cursor: pointer;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    display: block;
+}
+
+.selfish-bg-item.active img {
+    border-color: var(--selfish-accent);
+    box-shadow: 0 0 12px rgba(var(--selfish-accent-rgb), 0.5);
+}
+
+.selfish-bg-item img:hover {
+    border-color: #ffffff;
+    transform: scale(1.04);
+}
+
+.selfish-bg-del {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: rgba(10, 6, 20, 0.78);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+    font-size: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0.85;
+    transition: 0.18s ease;
+}
+
+.selfish-bg-del:hover {
+    background: #ff2a5f;
+    border-color: #ff2a5f;
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+/* Слайдери оптики */
+.selfish-sliders-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.selfish-slider-box {
+    background: rgba(0, 0, 0, 0.24);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 10px 12px;
+}
+
+.selfish-range {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 5px;
+    border-radius: 999px;
+    background: linear-gradient(
+        to right,
+        var(--selfish-accent) 0%,
+        var(--selfish-accent-2, var(--selfish-accent)) var(--range-pct, 0%),
+        rgba(255, 255, 255, 0.15) var(--range-pct, 0%)
+    );
+    outline: none;
+    cursor: pointer;
+}
+
+.selfish-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 2.5px solid var(--selfish-accent);
+    box-shadow: var(--selfish-accent-glow);
+    cursor: pointer;
+    transition: transform 0.15s ease;
+}
+
+.selfish-range::-webkit-slider-thumb:hover {
+    transform: scale(1.18);
+}
+
+/* Сегментований перемикач режимів кольору */
+.selfish-segmented {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    background: rgba(0, 0, 0, 0.34);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 999px;
+    padding: 3px;
+    gap: 4px;
+    margin-bottom: 12px;
+}
+
+.selfish-radio {
+    text-align: center;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.65);
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.selfish-radio:hover {
+    color: #ffffff;
+}
+
+.selfish-radio.active {
+    background: var(--selfish-accent-bg, var(--selfish-accent));
+    color: #ffffff;
+    box-shadow: 0 2px 12px rgba(var(--selfish-accent-rgb), 0.45);
+}
+
+/* Палітра та градієнт */
+.selfish-picker-box {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.selfish-adaptive-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(var(--selfish-accent-rgb), 0.16), rgba(0, 0, 0, 0.28));
+    border: 1px solid rgba(var(--selfish-accent-rgb), 0.35);
+}
+
+.selfish-adaptive-orb {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--selfish-accent);
+    box-shadow: 0 0 18px var(--selfish-accent);
+    border: 2px solid rgba(255, 255, 255, 0.85);
+    flex-shrink: 0;
+}
+
+.selfish-grad-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    background: rgba(0, 0, 0, 0.24);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 10px 12px;
+}
+
+.selfish-grad-preview {
+    height: 14px;
+    width: 100%;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.35);
+}
+
+.selfish-grad-stops {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.selfish-stop-btn {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    padding: 4px 11px 4px 5px;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.selfish-stop-btn.active {
+    background: rgba(255, 255, 255, 0.16);
+    border-color: #ffffff;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+}
+
+.selfish-stop-swatch {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 1.5px solid #ffffff;
+}
+
+.selfish-grad-presets {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.selfish-grad-preset {
+    width: 21px;
+    height: 21px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255, 255, 255, 0.35);
+    cursor: pointer;
+    transition: transform 0.18s ease, border-color 0.18s ease;
+}
+
+.selfish-grad-preset:hover {
+    transform: scale(1.16);
+    border-color: #ffffff;
+}
+
+.selfish-picker-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.selfish-hex-input {
+    background: rgba(0, 0, 0, 0.36);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 999px;
+    color: #ffffff;
+    padding: 6px 12px;
+    font-family: monospace;
+    font-size: 12.5px;
+    width: 88px;
+    text-align: center;
+    outline: none;
+}
+
+.selfish-hex-input:focus {
+    border-color: var(--selfish-accent);
+}
+
+/* === fullscreen.css === */
+#selfish-fs-overlay {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(5, 2, 10, 0.72);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    opacity: 1;
+    transition: opacity 0.4s ease;
+    overflow: hidden;
+    user-select: none;
+}
+
+#selfish-fs-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+#selfish-fs-overlay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    backdrop-filter: blur(var(--selfish-blur));
+    -webkit-backdrop-filter: blur(var(--selfish-blur));
+    z-index: -1;
+}
+
+#selfish-fs-bg {
+    position: absolute;
+    top: -10%;
+    left: -10%;
+    width: 120%;
+    height: 120%;
+    background-size: cover;
+    background-position: center;
+    filter: blur(80px) brightness(0.45);
+    z-index: -2;
+    opacity: 0.92;
+    animation: selfishSlowPan 20s infinite alternate linear;
+}
+
+@keyframes selfishSlowPan {
+    0% {
+        transform: scale(1) translate(0, 0);
+    }
+
+    100% {
+        transform: scale(1.1) translate(-2%, 2%);
+    }
+}
+
+#selfish-fs-close {
+    position: absolute;
+    top: 70px;
+    right: 32px;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    transition: opacity 0.8s ease, transform 0.3s ease, background 0.2s ease;
+}
+
+#selfish-fs-close:hover {
+    background: var(--fs-accent, var(--selfish-accent));
+    transform: scale(1.08);
+}
+
+.selfish-fs-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6vw;
+    width: 85%;
+    max-width: 1350px;
+    z-index: 5;
+}
+
+.selfish-fs-cover-wrap {
+    flex-shrink: 0;
+    animation: selfishFloatingCover 6s ease-in-out infinite;
+}
 
 @keyframes selfishFloatingCover {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-16px); }
+
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-16px);
+    }
 }
 
 @keyframes selfishCoverGlow {
-    0% { box-shadow: 0 30px 60px rgba(0, 0, 0, 0.75), 0 0 18px var(--fs-accent, var(--selfish-accent)); }
-    100% { box-shadow: 0 30px 60px rgba(0, 0, 0, 0.75), 0 0 55px var(--fs-accent, var(--selfish-accent)); }
+    0% {
+        box-shadow: 0 30px 60px rgba(0, 0, 0, 0.75), 0 0 18px var(--fs-accent, var(--selfish-accent));
+    }
+
+    100% {
+        box-shadow: 0 30px 60px rgba(0, 0, 0, 0.75), 0 0 55px var(--fs-accent, var(--selfish-accent));
+    }
 }
 
-#selfish-fs-cover { width: 44vh; height: 44vh; max-width: 440px; max-height: 440px; border-radius: 24px; object-fit: cover; border: 1px solid rgba(255, 255, 255, 0.14); transform-style: preserve-3d; will-change: transform; transition: transform 0.12s ease-out; animation: selfishCoverGlow 4s infinite alternate ease-in-out; }
-.selfish-fs-info { display: flex; flex-direction: column; align-items: flex-start; max-width: 580px; width: 100%; }
-#selfish-fs-title { font-size: clamp(28px, 3.2vw, 52px); font-weight: 800; color: #ffffff; margin: 0 0 8px 0; line-height: 1.12; text-shadow: 0 10px 30px rgba(0, 0, 0, 0.8); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; transition: opacity 0.8s ease, transform 0.8s ease; }
-#selfish-fs-artist { font-size: clamp(16px, 1.4vw, 24px); color: rgba(255, 255, 255, 0.7); font-weight: 600; margin: 0 0 24px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; transition: opacity 0.8s ease, transform 0.8s ease; }
-#selfish-fs-vis-wrap { width: 100%; height: 74px; margin-bottom: 22px; transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
-#selfish-fs-visualizer { width: 100%; height: 100%; display: block; }
-.selfish-fs-progress-wrap { width: 100%; margin-bottom: 28px; transition: opacity 0.8s ease, transform 0.8s ease; }
-.selfish-fs-time-row { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; color: rgba(255, 255, 255, 0.6); margin-bottom: 8px; }
-#selfish-fs-progress { -webkit-appearance: none; width: 100%; height: 6px; border-radius: 4px; outline: none; cursor: pointer; background: linear-gradient(to right, var(--fs-accent, var(--selfish-accent)) var(--progress, 0%), rgba(255, 255, 255, 0.2) var(--progress, 0%)); }
-#selfish-fs-progress::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: #ffffff; box-shadow: 0 0 12px var(--fs-accent, var(--selfish-accent)); cursor: pointer; }
-.selfish-fs-controls { display: flex; align-items: center; gap: 34px; transition: opacity 0.8s ease, transform 0.8s ease; }
-.selfish-fs-ctrl-btn { background: none; border: none; color: rgba(255, 255, 255, 0.8); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.2s ease, color 0.2s ease; }
-.selfish-fs-ctrl-btn:hover { color: var(--fs-accent, var(--selfish-accent)); transform: scale(1.15); }
-.selfish-fs-play-btn { width: 64px; height: 64px; border-radius: 50%; background: #ffffff; color: #090514; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6); transition: transform 0.2s ease, box-shadow 0.2s ease; }
-.selfish-fs-play-btn:hover { transform: scale(1.07); box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7), 0 0 25px var(--fs-accent, var(--selfish-accent)); }
+#selfish-fs-cover {
+    width: 44vh;
+    height: 44vh;
+    max-width: 440px;
+    max-height: 440px;
+    border-radius: 24px;
+    object-fit: cover;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    transform-style: preserve-3d;
+    will-change: transform;
+    transition: transform 0.12s ease-out;
+    animation: selfishCoverGlow 4s infinite alternate ease-in-out;
+}
+
+.selfish-fs-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    max-width: 580px;
+    width: 100%;
+}
+
+#selfish-fs-title {
+    font-size: clamp(28px, 3.2vw, 52px);
+    font-weight: 800;
+    color: #ffffff;
+    margin: 0 0 8px 0;
+    line-height: 1.12;
+    text-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+#selfish-fs-artist {
+    font-size: clamp(16px, 1.4vw, 24px);
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 600;
+    margin: 0 0 24px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+#selfish-fs-vis-wrap {
+    width: 100%;
+    height: 74px;
+    margin-bottom: 22px;
+    transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#selfish-fs-visualizer {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.selfish-fs-progress-wrap {
+    width: 100%;
+    margin-bottom: 28px;
+    transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+.selfish-fs-time-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 8px;
+}
+
+#selfish-fs-progress {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: 4px;
+    outline: none;
+    cursor: pointer;
+    background: linear-gradient(to right, var(--fs-accent, var(--selfish-accent)) var(--progress, 0%), rgba(255, 255, 255, 0.2) var(--progress, 0%));
+}
+
+#selfish-fs-progress::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 0 12px var(--fs-accent, var(--selfish-accent));
+    cursor: pointer;
+}
+
+.selfish-fs-controls {
+    display: flex;
+    align-items: center;
+    gap: 34px;
+    transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+.selfish-fs-ctrl-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.8);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.selfish-fs-ctrl-btn:hover {
+    color: var(--fs-accent, var(--selfish-accent));
+    transform: scale(1.15);
+}
+
+.selfish-fs-play-btn {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: #ffffff;
+    color: #090514;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.selfish-fs-play-btn:hover {
+    transform: scale(1.07);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7), 0 0 25px var(--fs-accent, var(--selfish-accent));
+}
 
 #selfish-fs-overlay.fs-hide-ui #selfish-fs-close,
 #selfish-fs-overlay.fs-hide-ui #selfish-fs-title,
 #selfish-fs-overlay.fs-hide-ui #selfish-fs-artist,
 #selfish-fs-overlay.fs-hide-ui .selfish-fs-progress-wrap,
-#selfish-fs-overlay.fs-hide-ui .selfish-fs-controls { opacity: 0 !important; transform: translateY(18px); pointer-events: none; }
-#selfish-fs-overlay.fs-hide-ui #selfish-fs-vis-wrap { transform: translateY(-45px) scale(1.12); }
+#selfish-fs-overlay.fs-hide-ui .selfish-fs-controls {
+    opacity: 0 !important;
+    transform: translateY(18px);
+    pointer-events: none;
+}
+
+#selfish-fs-overlay.fs-hide-ui #selfish-fs-vis-wrap {
+    transform: translateY(-45px) scale(1.12);
+}

@@ -50,15 +50,52 @@ Selfish.DB = (() => {
     return { save, get, remove };
 })();
 
-// === engine.js ===
-Selfish.Engine = (() => {
-    const state = {
-        colorMode: localStorage.getItem("selfishColorMode") || "fixed",
-        savedColor: localStorage.getItem("selfishThemeColor") || "#b026ff",
-        blurPercent: localStorage.getItem("selfishGlassBlurPercent") || "33",
-        currentBgId: localStorage.getItem("selfishCurrentBgId") || null,
-        bgHistoryIds: JSON.parse(localStorage.getItem("selfishBgHistoryIds") || "[]")
+// === state.js ===
+Selfish.State = (() => {
+    const STORAGE_KEYS = {
+        bgMode: "selfishBgMode",
+        colorMode: "selfishColorMode",
+        savedColor: "selfishThemeColor",
+        savedColor2: "selfishThemeColor2",
+        gradientAngle: "selfishGradientAngle",
+        blurPercent: "selfishGlassBlurPercent",
+        refractionPercent: "selfishGlassRefractionPercent",
+        currentBgId: "selfishCurrentBgId",
+        bgHistoryIds: "selfishBgHistoryIds"
     };
+
+    const data = {
+        bgMode: localStorage.getItem(STORAGE_KEYS.bgMode) || "custom",
+        colorMode: localStorage.getItem(STORAGE_KEYS.colorMode) || "fixed",
+        savedColor: localStorage.getItem(STORAGE_KEYS.savedColor) || "#b026ff",
+        savedColor2: localStorage.getItem(STORAGE_KEYS.savedColor2) || "#ff2a85",
+        gradientAngle: localStorage.getItem(STORAGE_KEYS.gradientAngle) || "135",
+        blurPercent: localStorage.getItem(STORAGE_KEYS.blurPercent) || "33",
+        refractionPercent: localStorage.getItem(STORAGE_KEYS.refractionPercent) || "0",
+        currentBgId: localStorage.getItem(STORAGE_KEYS.currentBgId) || null,
+        bgHistoryIds: JSON.parse(localStorage.getItem(STORAGE_KEYS.bgHistoryIds) || "[]")
+    };
+
+    function set(key, value) {
+        data[key] = value;
+        const storageKey = STORAGE_KEYS[key];
+        if (!storageKey) return;
+
+        if (value === null || value === undefined) {
+            localStorage.removeItem(storageKey);
+        } else if (Array.isArray(value)) {
+            localStorage.setItem(storageKey, JSON.stringify(value));
+        } else {
+            localStorage.setItem(storageKey, String(value));
+        }
+    }
+
+    return { data, set };
+})();
+
+// === colors.js ===
+Selfish.Colors = (() => {
+    const state = Selfish.State.data;
 
     function hexToRgb(hex) {
         let clean = hex.replace("#", "").trim();
@@ -67,26 +104,185 @@ Selfish.Engine = (() => {
         return isNaN(num) ? [176, 38, 255] : [(num >> 16) & 255, (num >> 8) & 255, num & 255];
     }
 
+    function rgbToHex(r, g, b) {
+        return "#" + [r, g, b].map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, "0")).join("");
+    }
+
     function applyColor(hex, persist = true) {
         const [r, g, b] = hexToRgb(hex);
         const root = document.documentElement;
+        root.classList.remove("selfish-gradient-mode");
         root.style.setProperty("--selfish-accent", hex);
+        root.style.setProperty("--selfish-accent-2", hex);
+        root.style.setProperty("--selfish-accent-bg", hex);
         root.style.setProperty("--selfish-accent-rgb", `${r}, ${g}, ${b}`);
+        root.style.setProperty("--selfish-accent-2-rgb", `${r}, ${g}, ${b}`);
         root.style.setProperty("--selfish-accent-glow", `0 0 15px rgba(${r}, ${g}, ${b}, 0.6)`);
 
         if (persist && state.colorMode === "fixed") {
-            state.savedColor = hex;
-            localStorage.setItem("selfishThemeColor", hex);
+            Selfish.State.set("savedColor", hex);
         }
+    }
+
+    function applyGradient(hex1, hex2, angle = state.gradientAngle, persist = true) {
+        const [r1, g1, b1] = hexToRgb(hex1);
+        const [r2, g2, b2] = hexToRgb(hex2);
+        const deg = Math.max(0, Math.min(360, Number(angle) || 135));
+        const grad = `linear-gradient(${deg}deg, ${hex1}, ${hex2})`;
+
+        const root = document.documentElement;
+        root.classList.add("selfish-gradient-mode");
+        root.style.setProperty("--selfish-accent", hex1);
+        root.style.setProperty("--selfish-accent-2", hex2);
+        root.style.setProperty("--selfish-accent-bg", grad);
+        root.style.setProperty("--selfish-accent-rgb", `${r1}, ${g1}, ${b1}`);
+        root.style.setProperty("--selfish-accent-2-rgb", `${r2}, ${g2}, ${b2}`);
+        root.style.setProperty(
+            "--selfish-accent-glow",
+            `0 0 14px rgba(${r1}, ${g1}, ${b1}, 0.55), 0 0 22px rgba(${r2}, ${g2}, ${b2}, 0.35)`
+        );
+
+        if (persist) {
+            Selfish.State.set("savedColor", hex1);
+            Selfish.State.set("savedColor2", hex2);
+            Selfish.State.set("gradientAngle", String(deg));
+        }
+    }
+
+    function extractDominantColor(src, callback) {
+        if (!src) return;
+        const img = new Image();
+        img.crossOrigin = "Anonymous";
+        img.onload = () => {
+            try {
+                const size = 16;
+                const canvas = document.createElement("canvas");
+                canvas.width = size;
+                canvas.height = size;
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(img, 0, 0, size, size);
+                const pixels = ctx.getImageData(0, 0, size, size).data;
+
+                let bestScore = -1;
+                let bestRgb = [176, 38, 255];
+                let bestDiff = 0;
+
+                for (let i = 0; i < pixels.length; i += 4) {
+                    const r = pixels[i];
+                    const g = pixels[i + 1];
+                    const b = pixels[i + 2];
+                    if (pixels[i + 3] < 128) continue;
+
+                    const max = Math.max(r, g, b);
+                    const min = Math.min(r, g, b);
+                    const diff = max - min;
+                    const lum = (max + min) / 2;
+
+                    if (max < 35 || min > 238) continue;
+
+                    const score = diff * 2.2 + (lum >= 50 && lum <= 215 ? 45 : 0);
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestRgb = [r, g, b];
+                        bestDiff = diff;
+                    }
+                }
+
+                if (bestScore < 0 || bestDiff < 18) return callback("#c084fc");
+
+                let [r, g, b] = bestRgb;
+                const max = Math.max(r, g, b);
+                if (max < 145) {
+                    const boost = 145 - max;
+                    r = Math.min(255, r + boost);
+                    g = Math.min(255, g + boost);
+                    b = Math.min(255, b + boost);
+                }
+
+                callback(rgbToHex(r, g, b));
+            } catch (e) {}
+        };
+        img.src = src;
+    }
+
+    function syncAdaptive(bgDataUrl = null) {
+        if (state.colorMode === "gradient") {
+            return applyGradient(state.savedColor, state.savedColor2, state.gradientAngle, false);
+        }
+        if (state.colorMode !== "adaptive") {
+            return applyColor(state.savedColor, false);
+        }
+        if (bgDataUrl) {
+            return extractDominantColor(bgDataUrl, hex => applyColor(hex, false));
+        }
+        if (state.bgMode === "cover") {
+            const cover = Selfish.Background.getCoverUrl();
+            if (cover) return extractDominantColor(cover, hex => applyColor(hex, false));
+        }
+        if (state.currentBgId) {
+            return Selfish.DB.get(state.currentBgId).then(data => {
+                if (data) extractDominantColor(data, hex => applyColor(hex, false));
+            });
+        }
+        const cover = Selfish.Background.getCoverUrl();
+        if (cover) extractDominantColor(cover, hex => applyColor(hex, false));
+    }
+
+    function init() {
+        if (state.colorMode === "gradient") {
+            applyGradient(state.savedColor, state.savedColor2, state.gradientAngle, false);
+        } else {
+            applyColor(state.savedColor, false);
+        }
+    }
+
+    return { init, applyColor, applyGradient, extractDominantColor, syncAdaptive };
+})();
+
+// === optics.js ===
+Selfish.Optics = (() => {
+    const state = Selfish.State.data;
+
+    function update() {
+        const blurVal = Math.max(0, Math.min(100, Number(state.blurPercent)));
+        const refVal = Math.max(0, Math.min(100, Number(state.refractionPercent)));
+        const refRatio = refVal / 100;
+
+        const px = ((blurVal / 100) * 60).toFixed(1);
+        const sat = (115 + refRatio * 60).toFixed(0);
+        const rimAlpha = (0.08 + refRatio * 0.26).toFixed(3);
+        const causticAlpha = (refRatio * 0.22).toFixed(3);
+        const dispersionAlpha = (refRatio * 0.16).toFixed(3);
+
+        const root = document.documentElement;
+        root.style.setProperty("--selfish-blur", `${px}px`);
+        root.style.setProperty("--selfish-glass-sat", `${sat}%`);
+        root.style.setProperty("--selfish-refraction-rim", `rgba(255, 255, 255, ${rimAlpha})`);
+        root.style.setProperty("--selfish-refraction-caustic", causticAlpha);
+        root.style.setProperty("--selfish-refraction-dispersion", dispersionAlpha);
     }
 
     function applyBlur(percent) {
         const val = Math.max(0, Math.min(100, Number(percent)));
-        const px = ((val / 100) * 60).toFixed(1);
-        document.documentElement.style.setProperty("--selfish-blur", `${px}px`);
-        state.blurPercent = String(val);
-        localStorage.setItem("selfishGlassBlurPercent", state.blurPercent);
+        Selfish.State.set("blurPercent", String(val));
+        update();
     }
+
+    function applyRefraction(percent) {
+        const val = Math.max(0, Math.min(100, Number(percent)));
+        Selfish.State.set("refractionPercent", String(val));
+        update();
+    }
+
+    return { init: update, applyBlur, applyRefraction };
+})();
+
+// === background.js ===
+Selfish.Background = (() => {
+    const state = Selfish.State.data;
+    let activeBgUrl = "";
+    let activeSlideIdx = 0;
+    let transitionToken = 0;
 
     function getCoverUrl() {
         const raw = Spicetify.Player.data?.item?.metadata?.image_xlarge_url
@@ -96,97 +292,154 @@ Selfish.Engine = (() => {
         return raw.startsWith("spotify:image:") ? raw.replace("spotify:image:", "https://i.scdn.co/image/") : raw;
     }
 
-    function extractDominantColor(src, callback) {
-        if (!src) return;
-        const img = new Image();
-        img.crossOrigin = "Anonymous";
-        img.onload = () => {
-            try {
-                const canvas = document.createElement("canvas");
-                canvas.width = 1;
-                canvas.height = 1;
-                const ctx = canvas.getContext("2d");
-                ctx.drawImage(img, 0, 0, 1, 1);
-                let [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
-
-                if (r < 40 && g < 40 && b < 40) {
-                    r = Math.min(255, r + 80);
-                    g = Math.min(255, g + 80);
-                    b = Math.min(255, b + 80);
-                }
-                const isGray = Math.abs(r - g) < 15 && Math.abs(g - b) < 15 && Math.abs(r - b) < 15;
-                if (isGray) return callback("#d8b4fe");
-
-                const max = Math.max(r, g, b);
-                if (max === r) r = Math.min(255, r + 45);
-                if (max === g) g = Math.min(255, g + 45);
-                if (max === b) b = Math.min(255, b + 45);
-
-                callback("#" + [r, g, b].map(x => x.toString(16).padStart(2, "0")).join(""));
-            } catch (e) {}
-        };
-        img.src = src;
-    }
-
-    function syncAdaptive(bgDataUrl = null) {
-        if (state.colorMode !== "adaptive") return applyColor(state.savedColor, false);
-        if (bgDataUrl) return extractDominantColor(bgDataUrl, hex => applyColor(hex, false));
-        if (state.currentBgId) {
-            return Selfish.DB.get(state.currentBgId).then(data => {
-                if (data) extractDominantColor(data, hex => applyColor(hex, false));
-            });
-        }
-        const cover = getCoverUrl();
-        if (cover) extractDominantColor(cover, hex => applyColor(hex, false));
-    }
-
-    async function applyBackground(dataUrl, id = null, onUpdate = null) {
+    async function getContainer() {
         let container = document.querySelector(".Root__top-container");
         while (!container) {
             await new Promise(r => setTimeout(r, 100));
             container = document.querySelector(".Root__top-container");
         }
+        return container;
+    }
 
-        if (dataUrl) {
-            container.classList.add("has-custom-bg");
-            container.style.setProperty("background-image", `url("${dataUrl}")`, "important");
-            if (id) {
-                state.currentBgId = id;
-                localStorage.setItem("selfishCurrentBgId", id);
-                state.bgHistoryIds = [id, ...state.bgHistoryIds.filter(i => i !== id)].slice(0, 10);
-                localStorage.setItem("selfishBgHistoryIds", JSON.stringify(state.bgHistoryIds));
-            }
-            if (state.colorMode === "adaptive") syncAdaptive(dataUrl);
+    function ensureBgStage(container) {
+        let stage = document.getElementById("selfish-bg-stage");
+        if (!stage) {
+            stage = document.createElement("div");
+            stage.id = "selfish-bg-stage";
+            stage.innerHTML = `<div class="selfish-bg-slide"></div><div class="selfish-bg-slide"></div>`;
+            container.prepend(stage);
+        }
+        return stage.querySelectorAll(".selfish-bg-slide");
+    }
+
+    function preloadImage(src) {
+        return new Promise(resolve => {
+            if (!src) return resolve(false);
+            const img = new Image();
+            img.onload = () => resolve(true);
+            img.onerror = () => resolve(false);
+            img.src = src;
+        });
+    }
+
+    async function transitionTo(newUrl, onSwap = null) {
+        const container = await getContainer();
+        const slides = ensureBgStage(container);
+        const token = ++transitionToken;
+
+        if (!newUrl) {
+            slides.forEach(s => {
+                s.style.transition = "opacity 0.22s ease-out";
+                s.style.opacity = "0";
+            });
+            activeBgUrl = "";
+            if (typeof onSwap === "function") onSwap();
+            setTimeout(() => {
+                if (token === transitionToken) container.classList.remove("has-custom-bg");
+            }, 230);
+            return;
+        }
+
+        if (activeBgUrl === newUrl && container.classList.contains("has-custom-bg")) {
+            if (typeof onSwap === "function") onSwap();
+            return;
+        }
+
+        await preloadImage(newUrl);
+        if (token !== transitionToken) return;
+
+        const prevSlide = slides[activeSlideIdx];
+        const nextIdx = 1 - activeSlideIdx;
+        const nextSlide = slides[nextIdx];
+        const hadBg = container.classList.contains("has-custom-bg") && Boolean(activeBgUrl);
+
+        container.classList.add("has-custom-bg");
+        activeBgUrl = newUrl;
+        activeSlideIdx = nextIdx;
+
+        nextSlide.style.transition = "none";
+        nextSlide.style.opacity = "0";
+        nextSlide.style.backgroundImage = `url("${newUrl}")`;
+        void nextSlide.offsetWidth;
+
+        if (typeof onSwap === "function") onSwap();
+
+        if (hadBg) {
+            prevSlide.style.transition = "opacity 0.2s ease-out";
+            prevSlide.style.opacity = "0";
+            nextSlide.style.transition = "opacity 0.25s ease-in 0.07s";
+            nextSlide.style.opacity = "1";
         } else {
-            container.classList.remove("has-custom-bg");
-            container.style.removeProperty("background-image");
-            state.currentBgId = null;
-            localStorage.removeItem("selfishCurrentBgId");
-            syncAdaptive();
+            nextSlide.style.transition = "opacity 0.28s ease-out";
+            nextSlide.style.opacity = "1";
+        }
+    }
+
+    async function applyCoverBackground() {
+        const cover = getCoverUrl();
+        await transitionTo(cover || null, () => {
+            if (state.colorMode === "adaptive") Selfish.Colors.syncAdaptive(cover || null);
+        });
+    }
+
+    async function applyBackground(dataUrl, id = null, onUpdate = null) {
+        if (dataUrl) {
+            if (id) {
+                Selfish.State.set("currentBgId", id);
+                const nextHistory = [id, ...state.bgHistoryIds.filter(i => i !== id)].slice(0, 10);
+                Selfish.State.set("bgHistoryIds", nextHistory);
+            }
+            await transitionTo(dataUrl, () => {
+                if (state.colorMode === "adaptive") Selfish.Colors.syncAdaptive(dataUrl);
+            });
+        } else {
+            Selfish.State.set("currentBgId", null);
+            await transitionTo(null, () => Selfish.Colors.syncAdaptive(null));
         }
         if (typeof onUpdate === "function") onUpdate();
     }
 
-    async function init() {
-        applyBlur(state.blurPercent);
-        applyColor(state.savedColor, false);
-        if (state.currentBgId) {
+    async function setBgMode(mode) {
+        const nextMode = mode === "cover" ? "cover" : "custom";
+        Selfish.State.set("bgMode", nextMode);
+
+        if (nextMode === "cover") {
+            await applyCoverBackground();
+        } else if (state.currentBgId) {
             const data = await Selfish.DB.get(state.currentBgId);
-            if (data) await applyBackground(data, state.currentBgId);
-            else syncAdaptive();
+            await applyBackground(data || null, data ? state.currentBgId : null);
         } else {
-            syncAdaptive();
+            await applyBackground(null);
         }
-        Spicetify.Player.addEventListener("songchange", () => {
-            if (state.colorMode === "adaptive" && !state.currentBgId) syncAdaptive();
-        });
     }
 
-    return { state, init, applyColor, applyBlur, applyBackground, syncAdaptive, getCoverUrl, extractDominantColor };
+    async function init() {
+        if (state.bgMode === "cover") {
+            await applyCoverBackground();
+        } else if (state.currentBgId) {
+            const data = await Selfish.DB.get(state.currentBgId);
+            if (data) await applyBackground(data, state.currentBgId);
+            else Selfish.Colors.syncAdaptive(null);
+        } else {
+            Selfish.Colors.syncAdaptive(null);
+        }
+    }
+
+    return { init, getCoverUrl, applyCoverBackground, applyBackground, setBgMode };
 })();
 
-// === settings.js ===
-Selfish.Settings = (() => {
+// === picker.js ===
+Selfish.Picker = (() => {
+    const GRADIENT_PRESETS = [
+        { c1: "#b026ff", c2: "#ff2a85", angle: 135, title: "Cyber Violet" },
+        { c1: "#00f5d4", c2: "#4361ee", angle: 135, title: "Ocean Neon" },
+        { c1: "#ff6b6b", c2: "#feca57", angle: 120, title: "Sunset Glow" },
+        { c1: "#f72585", c2: "#7209b7", angle: 135, title: "Synthwave" },
+        { c1: "#38ef7d", c2: "#11998e", angle: 135, title: "Emerald Mint" }
+    ];
+
+    const SOLID_PRESETS = ["#b026ff", "#ff2a85", "#00f5d4", "#4361ee", "#feca57", "#38ef7d"];
+
     function drawColorSpectrum(canvas) {
         const ctx = canvas.getContext("2d", { willReadFrequently: true });
         const gradH = ctx.createLinearGradient(0, 0, canvas.width, 0);
@@ -210,59 +463,342 @@ Selfish.Settings = (() => {
         return ctx;
     }
 
+    function create(setRangeFill) {
+        const state = Selfish.State.data;
+        const { applyColor, applyGradient, syncAdaptive } = Selfish.Colors;
+        let draftC1 = state.savedColor;
+        let draftC2 = state.savedColor2;
+        let draftAngle = Number(state.gradientAngle) || 135;
+        let activeStop = 1;
+
+        const box = document.createElement("div");
+        box.className = "selfish-picker-box";
+
+        const gradPresetsHtml = GRADIENT_PRESETS.map((p, idx) =>
+            `<div class="selfish-grad-preset" data-idx="${idx}" title="${p.title}" style="background:linear-gradient(${p.angle}deg, ${p.c1}, ${p.c2});"></div>`
+        ).join("");
+
+        const solidPresetsHtml = SOLID_PRESETS.map(hex =>
+            `<div class="selfish-grad-preset selfish-solid-preset" data-hex="${hex}" title="${hex}" style="background:${hex};"></div>`
+        ).join("");
+
+        const isAdaptive = state.colorMode === "adaptive";
+
+        box.innerHTML = `
+            <div class="selfish-adaptive-card" id="selfish-adaptive-card" style="display:${isAdaptive ? "flex" : "none"};">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div class="selfish-adaptive-orb"></div>
+                    <div>
+                        <div style="font-size:13px; font-weight:700; color:#fff;">Автоматичний підбір палітри</div>
+                        <div style="font-size:11.5px; color:rgba(255,255,255,0.65);">Акцент береться з обкладинки треку або активного фону</div>
+                    </div>
+                </div>
+                <button type="button" class="selfish-btn" id="selfish-resync-adaptive-btn">Оновити</button>
+            </div>
+
+            <div id="selfish-manual-picker" style="display:${isAdaptive ? "none" : "flex"}; flex-direction:column; gap:10px;">
+                <div class="selfish-grad-panel" id="selfish-grad-panel" style="display:${state.colorMode === "gradient" ? "flex" : "none"};">
+                    <div class="selfish-grad-preview" id="selfish-grad-preview" style="background:linear-gradient(${draftAngle}deg, ${draftC1}, ${draftC2});"></div>
+                    <div class="selfish-grad-stops">
+                        <div style="display:flex; gap:8px;">
+                            <button type="button" class="selfish-stop-btn active" id="selfish-stop-1">
+                                <span class="selfish-stop-swatch" id="selfish-swatch-1" style="background:${draftC1};"></span>
+                                Колір 1
+                            </button>
+                            <button type="button" class="selfish-stop-btn" id="selfish-stop-2">
+                                <span class="selfish-stop-swatch" id="selfish-swatch-2" style="background:${draftC2};"></span>
+                                Колір 2
+                            </button>
+                        </div>
+                        <div class="selfish-grad-presets">${gradPresetsHtml}</div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span class="selfish-label" style="white-space:nowrap;">Кут: <strong id="selfish-angle-label" style="color:#fff;">${draftAngle}°</strong></span>
+                        <input type="range" id="selfish-angle-range" class="selfish-range" min="0" max="360" value="${draftAngle}">
+                    </div>
+                </div>
+
+                <canvas id="selfish-color-canvas" width="460" height="84" style="width:100%; height:84px; border-radius:13px; cursor:crosshair; border:1px solid rgba(255,255,255,0.16);"></canvas>
+                <div class="selfish-picker-controls">
+                    <div id="selfish-color-dot" style="width:26px; height:26px; border-radius:50%; background:${draftC1}; box-shadow:0 0 12px ${draftC1}; border:2px solid #fff; flex-shrink:0;"></div>
+                    <input type="text" id="selfish-hex-input" class="selfish-hex-input" value="${draftC1}" maxlength="7">
+                    <div id="selfish-solid-presets" class="selfish-grad-presets" style="display:${state.colorMode === "fixed" ? "flex" : "none"};">${solidPresetsHtml}</div>
+                    <button type="button" class="selfish-btn primary" id="selfish-apply-color-btn" style="margin-left:auto;">Застосувати</button>
+                </div>
+            </div>
+        `;
+
+        const adaptiveCard = box.querySelector("#selfish-adaptive-card");
+        const manualPicker = box.querySelector("#selfish-manual-picker");
+        const gradPanel = box.querySelector("#selfish-grad-panel");
+        const solidPresetsBox = box.querySelector("#selfish-solid-presets");
+        const gradPreview = box.querySelector("#selfish-grad-preview");
+        const stop1Btn = box.querySelector("#selfish-stop-1");
+        const stop2Btn = box.querySelector("#selfish-stop-2");
+        const swatch1 = box.querySelector("#selfish-swatch-1");
+        const swatch2 = box.querySelector("#selfish-swatch-2");
+        const angleRange = box.querySelector("#selfish-angle-range");
+        const angleLabel = box.querySelector("#selfish-angle-label");
+        const dot = box.querySelector("#selfish-color-dot");
+        const hexInput = box.querySelector("#selfish-hex-input");
+
+        function refreshGradientUi() {
+            swatch1.style.background = draftC1;
+            swatch2.style.background = draftC2;
+            gradPreview.style.background = `linear-gradient(${draftAngle}deg, ${draftC1}, ${draftC2})`;
+            angleRange.value = draftAngle;
+            angleLabel.textContent = `${draftAngle}°`;
+            setRangeFill(angleRange, 360);
+        }
+
+        function setActiveStop(stopNum) {
+            activeStop = stopNum;
+            stop1Btn.classList.toggle("active", stopNum === 1);
+            stop2Btn.classList.toggle("active", stopNum === 2);
+            const hex = stopNum === 1 ? draftC1 : draftC2;
+            dot.style.background = hex;
+            dot.style.boxShadow = `0 0 12px ${hex}`;
+            hexInput.value = hex;
+        }
+
+        function updateDraftColor(hex, liveApply = true) {
+            if (state.colorMode === "gradient" && activeStop === 2) draftC2 = hex;
+            else draftC1 = hex;
+
+            dot.style.background = hex;
+            dot.style.boxShadow = `0 0 12px ${hex}`;
+            hexInput.value = hex;
+            refreshGradientUi();
+
+            if (liveApply) {
+                if (state.colorMode === "gradient") applyGradient(draftC1, draftC2, draftAngle, true);
+                else if (state.colorMode === "fixed") applyColor(draftC1, true);
+            }
+        }
+
+        function setMode(mode) {
+            const adaptive = mode === "adaptive";
+            adaptiveCard.style.display = adaptive ? "flex" : "none";
+            manualPicker.style.display = adaptive ? "none" : "flex";
+            gradPanel.style.display = mode === "gradient" ? "flex" : "none";
+            solidPresetsBox.style.display = mode === "fixed" ? "flex" : "none";
+
+            if (mode === "gradient") {
+                setActiveStop(1);
+                refreshGradientUi();
+                applyGradient(draftC1, draftC2, draftAngle, true);
+            } else if (adaptive) {
+                syncAdaptive();
+            } else {
+                setActiveStop(1);
+                applyColor(draftC1, true);
+            }
+        }
+
+        box.querySelector("#selfish-resync-adaptive-btn").onclick = () => {
+            syncAdaptive();
+            Spicetify.showNotification("Адаптивний колір оновлено");
+        };
+
+        setRangeFill(angleRange, 360);
+        stop1Btn.onclick = () => setActiveStop(1);
+        stop2Btn.onclick = () => setActiveStop(2);
+
+        angleRange.oninput = e => {
+            draftAngle = Number(e.target.value);
+            refreshGradientUi();
+            if (state.colorMode === "gradient") applyGradient(draftC1, draftC2, draftAngle, true);
+        };
+
+        box.querySelectorAll(".selfish-grad-preset:not(.selfish-solid-preset)").forEach(el => {
+            el.onclick = () => {
+                const preset = GRADIENT_PRESETS[Number(el.dataset.idx)];
+                if (!preset) return;
+                draftC1 = preset.c1;
+                draftC2 = preset.c2;
+                draftAngle = preset.angle;
+                refreshGradientUi();
+                setActiveStop(activeStop);
+                applyGradient(draftC1, draftC2, draftAngle, true);
+                Spicetify.showNotification(`Градієнт «${preset.title}» застосовано`);
+            };
+        });
+
+        box.querySelectorAll(".selfish-solid-preset").forEach(el => {
+            el.onclick = () => updateDraftColor(el.dataset.hex, true);
+        });
+
+        const canvas = box.querySelector("#selfish-color-canvas");
+        const ctx = drawColorSpectrum(canvas);
+        const pick = e => {
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.max(0, Math.min(rect.width - 1, e.clientX - rect.left));
+            const y = Math.max(0, Math.min(rect.height - 1, e.clientY - rect.top));
+            const px = ctx.getImageData((x / rect.width) * canvas.width, (y / rect.height) * canvas.height, 1, 1).data;
+            const hex = "#" + [px[0], px[1], px[2]].map(v => v.toString(16).padStart(2, "0")).join("");
+            updateDraftColor(hex, true);
+        };
+
+        canvas.onpointerdown = e => { canvas.setPointerCapture(e.pointerId); pick(e); };
+        canvas.onpointermove = e => { if (canvas.hasPointerCapture(e.pointerId)) pick(e); };
+
+        hexInput.oninput = e => {
+            const val = e.target.value.trim();
+            if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(val)) updateDraftColor(val, true);
+        };
+
+        box.querySelector("#selfish-apply-color-btn").onclick = () => {
+            const val = hexInput.value.trim();
+            if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(val)) updateDraftColor(val, true);
+            if (state.colorMode === "gradient") {
+                applyGradient(draftC1, draftC2, draftAngle, true);
+                Spicetify.showNotification(`Градієнт ${draftC1} → ${draftC2} застосовано`);
+            } else {
+                applyColor(draftC1, true);
+                Spicetify.showNotification(`Колір ${draftC1} застосовано`);
+            }
+        };
+
+        return { element: box, setMode };
+    }
+
+    return { create };
+})();
+
+// === settings.js ===
+Selfish.Settings = (() => {
+    function setRangeFill(el, max = 100) {
+        const pct = Math.max(0, Math.min(100, (Number(el.value) / max) * 100));
+        el.style.setProperty("--range-pct", `${pct}%`);
+    }
+
     function open() {
-        const { state, applyBackground, applyBlur, applyColor, syncAdaptive } = Selfish.Engine;
+        const state = Selfish.State.data;
+        const { applyBackground, setBgMode } = Selfish.Background;
+        const { applyBlur, applyRefraction } = Selfish.Optics;
+
         const wrap = document.createElement("div");
         wrap.className = "selfish-settings-wrap";
 
         wrap.innerHTML = `
             <div class="selfish-card">
-                <h3 class="selfish-card-title">Задній фон та Вікна</h3>
-                <div class="selfish-row">
-                    <span class="selfish-label">Власне фото або GIF для фону</span>
-                    <div class="selfish-btn-group">
-                        <input type="file" id="selfish-bg-input" accept="image/*" style="display:none">
-                        <button class="selfish-btn primary" id="selfish-bg-upload-btn">Завантажити</button>
-                        <button class="selfish-btn" id="selfish-bg-reset-btn">Скинути</button>
+                <div class="selfish-card-header">
+                    <h3 class="selfish-card-title">
+                        <span class="selfish-title-badge">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+                        </span>
+                        Задній фон та Оптика скла
+                    </h3>
+                </div>
+
+                <div class="selfish-mode-cards">
+                    <div class="selfish-mode-card selfish-bg-mode ${state.bgMode === "custom" ? "active" : ""}" data-bgmode="custom">
+                        <div class="selfish-mode-icon">
+                            <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-5-7l-3 3.72L9 13l-3 4h12l-4-5z"/></svg>
+                        </div>
+                        <div class="selfish-mode-text">
+                            <span class="selfish-mode-name">Свій фон</span>
+                            <span class="selfish-mode-desc">Власне фото або GIF</span>
+                        </div>
+                    </div>
+
+                    <div class="selfish-mode-card selfish-bg-mode ${state.bgMode === "cover" ? "active" : ""}" data-bgmode="cover">
+                        <div class="selfish-mode-icon">
+                            <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+                        </div>
+                        <div class="selfish-mode-text">
+                            <span class="selfish-mode-name">Обкладинка треку</span>
+                            <span class="selfish-mode-desc">Жива зміна під музику</span>
+                        </div>
                     </div>
                 </div>
-                <div style="margin-top: 10px;">
-                    <span class="selfish-label" style="display:block; margin-bottom: 4px;">Історія фонів:</span>
+
+                <div class="selfish-bg-drawer" id="selfish-custom-bg-controls" style="${state.bgMode === "cover" ? "opacity:0.45;" : ""}">
+                    <div class="selfish-row">
+                        <span class="selfish-label">Галерея власних фонів</span>
+                        <div class="selfish-btn-group">
+                            <input type="file" id="selfish-bg-input" accept="image/*" style="display:none">
+                            <button type="button" class="selfish-btn primary" id="selfish-bg-upload-btn">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/></svg>
+                                Завантажити
+                            </button>
+                            <button type="button" class="selfish-btn" id="selfish-bg-reset-btn">Скинути</button>
+                        </div>
+                    </div>
                     <div class="selfish-bg-history" id="selfish-bg-history"></div>
                 </div>
-                <div style="margin-top: 14px;">
-                    <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
-                        <span class="selfish-label">Матовість вікон (Blur)</span>
-                        <span id="selfish-blur-label" style="font-size:13px; font-weight:700; color:var(--selfish-accent);">${state.blurPercent}%</span>
+
+                <div class="selfish-sliders-grid">
+                    <div class="selfish-slider-box">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:7px;">
+                            <span class="selfish-label">Матовість (Blur)</span>
+                            <span id="selfish-blur-label" style="font-size:12px; font-weight:700; color:var(--selfish-accent);">${state.blurPercent}%</span>
+                        </div>
+                        <input type="range" id="selfish-blur-range" class="selfish-range" min="0" max="100" value="${state.blurPercent}">
                     </div>
-                    <input type="range" id="selfish-blur-range" class="selfish-range" min="0" max="100" value="${state.blurPercent}">
+                    <div class="selfish-slider-box">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:7px;">
+                            <span class="selfish-label">Оптика плівки</span>
+                            <span id="selfish-refraction-label" style="font-size:12px; font-weight:700; color:var(--selfish-accent);">${state.refractionPercent}%</span>
+                        </div>
+                        <input type="range" id="selfish-refraction-range" class="selfish-range" min="0" max="100" value="${state.refractionPercent}">
+                    </div>
                 </div>
             </div>
 
-            <div class="selfish-card">
-                <h3 class="selfish-card-title">Акцентний колір</h3>
-                <div class="selfish-row">
-                    <span class="selfish-label">Режим кольору</span>
-                    <div class="selfish-btn-group">
-                        <div class="selfish-radio ${state.colorMode === "fixed" ? "active" : ""}" data-mode="fixed">Постійний</div>
-                        <div class="selfish-radio ${state.colorMode === "adaptive" ? "active" : ""}" data-mode="adaptive">Адаптивний</div>
-                    </div>
+            <div class="selfish-card" id="selfish-color-card">
+                <div class="selfish-card-header">
+                    <h3 class="selfish-card-title">
+                        <span class="selfish-title-badge">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.49 2 2 6.49 2 12s4.49 10 10 10c1.38 0 2.5-1.12 2.5-2.5 0-.61-.23-1.2-.64-1.67-.08-.1-.13-.21-.13-.33 0-.28.22-.5.5-.5H16c3.31 0 6-2.69 6-6 0-4.96-4.49-9-10-9zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 8 6.5 8 8 8.67 8 9.5 7.33 11 6.5 11zm3-4C8.67 7 8 6.33 8 5.5S8.67 4 9.5 4s1.5.67 1.5 1.5S10.33 7 9.5 7zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 4 14.5 4s1.5.67 1.5 1.5S15.33 7 14.5 7zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 8 17.5 8s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
+                        </span>
+                        Акцентний колір та Градієнт
+                    </h3>
                 </div>
-                <div class="selfish-picker-box" id="selfish-picker-box" style="${state.colorMode === "adaptive" ? "opacity:0.35; pointer-events:none;" : ""}">
-                    <canvas id="selfish-color-canvas" width="420" height="110" style="width:100%; height:110px; border-radius:10px; cursor:crosshair; border:1px solid rgba(255,255,255,0.15);"></canvas>
-                    <div class="selfish-picker-controls">
-                        <div id="selfish-color-dot" style="width:28px; height:28px; border-radius:50%; background:${state.savedColor}; box-shadow:0 0 12px ${state.savedColor}; border:2px solid #fff; flex-shrink:0;"></div>
-                        <input type="text" id="selfish-hex-input" class="selfish-hex-input" value="${state.savedColor}" maxlength="7">
-                        <button class="selfish-btn primary" id="selfish-apply-color-btn" style="margin-left:auto;">Застосувати</button>
-                    </div>
+                <div class="selfish-segmented">
+                    <div class="selfish-radio selfish-color-mode ${state.colorMode === "fixed" ? "active" : ""}" data-mode="fixed">Постійний</div>
+                    <div class="selfish-radio selfish-color-mode ${state.colorMode === "gradient" ? "active" : ""}" data-mode="gradient">Градієнт</div>
+                    <div class="selfish-radio selfish-color-mode ${state.colorMode === "adaptive" ? "active" : ""}" data-mode="adaptive">Адаптивний</div>
                 </div>
             </div>
         `;
 
+        const picker = Selfish.Picker.create(setRangeFill);
+        wrap.querySelector("#selfish-color-card").appendChild(picker.element);
+
+        const customBgControls = wrap.querySelector("#selfish-custom-bg-controls");
+        const bgModeBtns = wrap.querySelectorAll(".selfish-bg-mode");
+        const colorModeBtns = wrap.querySelectorAll(".selfish-color-mode");
+
+        function syncBgModeUi(mode) {
+            bgModeBtns.forEach(b => b.classList.toggle("active", b.dataset.bgmode === mode));
+            customBgControls.style.opacity = mode === "cover" ? "0.45" : "1";
+        }
+
+        function setColorMode(mode) {
+            colorModeBtns.forEach(b => b.classList.toggle("active", b.dataset.mode === mode));
+            Selfish.State.set("colorMode", mode);
+            picker.setMode(mode);
+        }
+
+        colorModeBtns.forEach(btn => {
+            btn.onclick = () => setColorMode(btn.dataset.mode);
+        });
+
+        bgModeBtns.forEach(btn => {
+            btn.onclick = async () => {
+                const mode = btn.dataset.bgmode;
+                syncBgModeUi(mode);
+                if (mode === "cover" && state.colorMode !== "adaptive") setColorMode("adaptive");
+                await setBgMode(mode);
+                Spicetify.showNotification(mode === "cover" ? "Фон та палітра за обкладинкою треку" : "Режим власного фону");
+            };
+        });
+
         const historyEl = wrap.querySelector("#selfish-bg-history");
         async function renderHistory() {
             if (!state.bgHistoryIds.length) {
-                historyEl.innerHTML = `<span style="font-size:12px; color:#888; font-style:italic;">Тут будуть ваші попередні фони</span>`;
+                historyEl.innerHTML = `<span style="font-size:11.5px; color:rgba(255,255,255,0.45); font-style:italic;">Завантажте фото або GIF — воно з'явиться тут</span>`;
                 return;
             }
             historyEl.innerHTML = "";
@@ -271,19 +807,20 @@ Selfish.Settings = (() => {
                 if (!dataUrl) continue;
 
                 const item = document.createElement("div");
-                item.className = "selfish-bg-item";
+                item.className = `selfish-bg-item ${state.currentBgId === id && state.bgMode === "custom" ? "active" : ""}`;
                 item.innerHTML = `<img src="${dataUrl}" title="Застосувати фон"><div class="selfish-bg-del" title="Видалити">&#10005;</div>`;
 
                 item.querySelector("img").onclick = () => {
+                    Selfish.State.set("bgMode", "custom");
+                    syncBgModeUi("custom");
                     applyBackground(dataUrl, id, renderHistory);
                     Spicetify.showNotification("Фон оновлено");
                 };
                 item.querySelector(".selfish-bg-del").onclick = async e => {
                     e.stopPropagation();
                     await Selfish.DB.remove(id);
-                    state.bgHistoryIds = state.bgHistoryIds.filter(i => i !== id);
-                    localStorage.setItem("selfishBgHistoryIds", JSON.stringify(state.bgHistoryIds));
-                    if (state.currentBgId === id) await applyBackground(null);
+                    Selfish.State.set("bgHistoryIds", state.bgHistoryIds.filter(i => i !== id));
+                    if (state.currentBgId === id && state.bgMode === "custom") await applyBackground(null);
                     renderHistory();
                 };
                 historyEl.appendChild(item);
@@ -300,6 +837,8 @@ Selfish.Settings = (() => {
             reader.onload = async ev => {
                 const newId = "bg_" + Date.now();
                 await Selfish.DB.save(newId, ev.target.result);
+                Selfish.State.set("bgMode", "custom");
+                syncBgModeUi("custom");
                 await applyBackground(ev.target.result, newId, renderHistory);
                 Spicetify.showNotification("Новий фон збережено!");
             };
@@ -307,66 +846,28 @@ Selfish.Settings = (() => {
         };
 
         wrap.querySelector("#selfish-bg-reset-btn").onclick = () => {
-            applyBackground(null);
+            Selfish.State.set("bgMode", "custom");
+            syncBgModeUi("custom");
+            applyBackground(null, null, renderHistory);
             Spicetify.showNotification("Повернуто стандартний градієнт");
         };
 
         const blurRange = wrap.querySelector("#selfish-blur-range");
         const blurLabel = wrap.querySelector("#selfish-blur-label");
+        setRangeFill(blurRange, 100);
         blurRange.oninput = e => {
             blurLabel.textContent = `${e.target.value}%`;
+            setRangeFill(blurRange, 100);
             applyBlur(e.target.value);
         };
 
-        const pickerBox = wrap.querySelector("#selfish-picker-box");
-        wrap.querySelectorAll(".selfish-radio").forEach(btn => {
-            btn.onclick = () => {
-                wrap.querySelectorAll(".selfish-radio").forEach(b => b.classList.remove("active"));
-                btn.classList.add("active");
-                state.colorMode = btn.dataset.mode;
-                localStorage.setItem("selfishColorMode", state.colorMode);
-
-                pickerBox.style.opacity = state.colorMode === "adaptive" ? "0.35" : "1";
-                pickerBox.style.pointerEvents = state.colorMode === "adaptive" ? "none" : "auto";
-                state.colorMode === "adaptive" ? syncAdaptive() : applyColor(state.savedColor, true);
-            };
-        });
-
-        const canvas = wrap.querySelector("#selfish-color-canvas");
-        const ctx = drawColorSpectrum(canvas);
-        const dot = wrap.querySelector("#selfish-color-dot");
-        const hexInput = wrap.querySelector("#selfish-hex-input");
-
-        let picking = false;
-        const pick = e => {
-            const rect = canvas.getBoundingClientRect();
-            const x = Math.max(0, Math.min(rect.width - 1, e.clientX - rect.left));
-            const y = Math.max(0, Math.min(rect.height - 1, e.clientY - rect.top));
-            const px = ctx.getImageData((x / rect.width) * canvas.width, (y / rect.height) * canvas.height, 1, 1).data;
-            const hex = "#" + [px[0], px[1], px[2]].map(v => v.toString(16).padStart(2, "0")).join("");
-            dot.style.background = hex;
-            dot.style.boxShadow = `0 0 12px ${hex}`;
-            hexInput.value = hex;
-        };
-
-        canvas.onmousedown = e => { picking = true; pick(e); };
-        canvas.onmousemove = e => { if (picking) pick(e); };
-        window.addEventListener("mouseup", () => { picking = false; });
-
-        hexInput.oninput = e => {
-            const val = e.target.value.trim();
-            if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(val)) {
-                dot.style.background = val;
-                dot.style.boxShadow = `0 0 12px ${val}`;
-            }
-        };
-
-        wrap.querySelector("#selfish-apply-color-btn").onclick = () => {
-            const val = hexInput.value.trim();
-            if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(val)) {
-                applyColor(val, true);
-                Spicetify.showNotification(`Колір ${val} застосовано`);
-            }
+        const refRange = wrap.querySelector("#selfish-refraction-range");
+        const refLabel = wrap.querySelector("#selfish-refraction-label");
+        setRangeFill(refRange, 100);
+        refRange.oninput = e => {
+            refLabel.textContent = `${e.target.value}%`;
+            setRangeFill(refRange, 100);
+            applyRefraction(e.target.value);
         };
 
         Spicetify.PopupModal.display({ title: "Налаштування Selfish UI", content: wrap, isLarge: true });
@@ -427,11 +928,11 @@ Selfish.Fullscreen = (() => {
         fsTitle.textContent = item.name || item.metadata?.title || "Невідомий трек";
         fsArtist.textContent = item.artists?.map(a => a.name).join(", ") || item.metadata?.artist_name || "Невідомий виконавець";
 
-        const cover = Selfish.Engine.getCoverUrl();
+        const cover = Selfish.Background.getCoverUrl();
         if (cover) {
             fsCover.src = cover;
             fsBg.style.backgroundImage = `url("${cover}")`;
-            Selfish.Engine.extractDominantColor(cover, hex => {
+            Selfish.Colors.extractDominantColor(cover, hex => {
                 fsAccent = hex;
                 overlay.style.setProperty("--fs-accent", hex);
             });
@@ -596,20 +1097,44 @@ Selfish.Fullscreen = (() => {
 
 // === main.js ===
 (async function Bootstrap() {
-    while (!Spicetify?.Player || !Spicetify?.Platform || !Spicetify?.Topbar?.Button || !Spicetify?.PopupModal) {
-        await new Promise(r => setTimeout(r, 100));
+  while (!Spicetify?.Player || !Spicetify?.Platform || !Spicetify?.Topbar?.Button || !Spicetify?.PopupModal) {
+    await new Promise(r => setTimeout(r, 100));
+  }
+
+  Selfish.Optics.init();
+  Selfish.Colors.init();
+  await Selfish.Background.init();
+  Selfish.Fullscreen.init();
+
+  Spicetify.Player.addEventListener("songchange", () => {
+    const { bgMode, colorMode, currentBgId } = Selfish.State.data;
+    if (bgMode === "cover") {
+      Selfish.Background.applyCoverBackground();
+    } else if (colorMode === "adaptive" && !currentBgId) {
+      Selfish.Colors.syncAdaptive(null);
     }
+  });
 
-    await Selfish.Engine.init();
-    Selfish.Fullscreen.init();
+  // --- ВСТАВЛЕНИЙ КОД (відстеження перетягування межі) ---
+  document.addEventListener("pointerdown", e => {
+    if (e.target?.closest?.('[class*="LayoutResizer"]')) {
+      document.body.classList.add("selfish-resizing");
+    }
+  }, true);
 
-    const paletteIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.49 2 2 6.49 2 12s4.49 10 10 10c1.38 0 2.5-1.12 2.5-2.5 0-.61-.23-1.2-.64-1.67-.08-.1-.13-.21-.13-.33 0-.28.22-.5.5-.5H16c3.31 0 6-2.69 6-6 0-4.96-4.49-9-10-9zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 8 6.5 8 8 8.67 8 9.5 7.33 11 6.5 11zm3-4C8.67 7 8 6.33 8 5.5S8.67 4 9.5 4s1.5.67 1.5 1.5S10.33 7 9.5 7zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 4 14.5 4s1.5.67 1.5 1.5S15.33 7 14.5 7zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 8 17.5 8s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>`;
-    const fsIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>`;
+  const stopResize = () => document.body.classList.remove("selfish-resizing");
+  window.addEventListener("pointerup", stopResize, true);
+  window.addEventListener("blur", stopResize);
+  // ------------------------------------------------------
 
-    new Spicetify.Topbar.Button("Налаштування Selfish UI", paletteIcon, Selfish.Settings.open, false, true);
-    new Spicetify.Topbar.Button("Selfish 3D Повноекранний режим (Alt+F)", fsIcon, Selfish.Fullscreen.open, false, true);
+  const paletteIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.49 2 2 6.49 2 12s4.49 10 10 10c1.38 0 2.5-1.12 2.5-2.5 0-.61-.23-1.2-.64-1.67-.08-.1-.13-.21-.13-.33 0-.28.22-.5.5-.5H16c3.31 0 6-2.69 6-6 0-4.96-4.49-9-10-9zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 8 6.5 8 8 8.67 8 9.5 7.33 11 6.5 11zm3-4C8.67 7 8 6.33 8 5.5S8.67 4 9.5 4s1.5.67 1.5 1.5S10.33 7 9.5 7zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 4 14.5 4s1.5.67 1.5 1.5S15.33 7 14.5 7zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 8 17.5 8s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>`;
+  const fsIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>`;
 
-    console.log("[Selfish UI] Modular architecture loaded!");
+  new Spicetify.Topbar.Button("Налаштування Selfish UI", paletteIcon, Selfish.Settings.open, false, true);
+  new Spicetify.Topbar.Button("Selfish 3D Повноекранний режим (Alt+F)", fsIcon, Selfish.Fullscreen.open, false, true);
+
+  console.log("[Selfish UI] Modular architecture loaded!");
 })();
+
 
 })();
