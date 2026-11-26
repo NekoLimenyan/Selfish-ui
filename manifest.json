@@ -3,9 +3,9 @@
     "name": "Selfish UI",
     "description": "Glassmorphism theme with custom photo/GIF backgrounds, adaptive & spectrum color picker, and 3D fullscreen audio visualizer.",
     "preview": "assets/preview.png",
-    "usercss": "user.css",
+    "usercss": "https://raw.githubusercontent.com/NekoLimenyan/Selfish-ui/main/user.css",
     "readme": "README.md",
-    "schemes": "color.ini",
+    "schemes": "https://raw.githubusercontent.com/NekoLimenyan/Selfish-ui/main/color.ini",
     "include": [
       "https://raw.githubusercontent.com/NekoLimenyan/Selfish-ui/main/theme.js"
     ],
