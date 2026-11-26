@@ -49,11 +49,11 @@ Selfish.Fullscreen = (() => {
         fsTitle.textContent = item.name || item.metadata?.title || "Невідомий трек";
         fsArtist.textContent = item.artists?.map(a => a.name).join(", ") || item.metadata?.artist_name || "Невідомий виконавець";
 
-        const cover = Selfish.Engine.getCoverUrl();
+        const cover = Selfish.Background.getCoverUrl();
         if (cover) {
             fsCover.src = cover;
             fsBg.style.backgroundImage = `url("${cover}")`;
-            Selfish.Engine.extractDominantColor(cover, hex => {
+            Selfish.Colors.extractDominantColor(cover, hex => {
                 fsAccent = hex;
                 overlay.style.setProperty("--fs-accent", hex);
             });

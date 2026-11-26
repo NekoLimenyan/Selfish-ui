@@ -1,47 +1,267 @@
-#selfish-fs-overlay { position: fixed; inset: 0; width: 100vw; height: 100vh; background-color: rgba(5, 2, 10, 0.72); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; opacity: 1; transition: opacity 0.4s ease; overflow: hidden; user-select: none; }
-#selfish-fs-overlay.hidden { opacity: 0; pointer-events: none; }
-#selfish-fs-overlay::before { content: ''; position: absolute; inset: 0; backdrop-filter: blur(var(--selfish-blur)); -webkit-backdrop-filter: blur(var(--selfish-blur)); z-index: -1; }
-#selfish-fs-bg { position: absolute; top: -10%; left: -10%; width: 120%; height: 120%; background-size: cover; background-position: center; filter: blur(80px) brightness(0.45); z-index: -2; opacity: 0.92; animation: selfishSlowPan 20s infinite alternate linear; }
-
-@keyframes selfishSlowPan {
-    0% { transform: scale(1) translate(0, 0); }
-    100% { transform: scale(1.1) translate(-2%, 2%); }
+#selfish-fs-overlay {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(5, 2, 10, 0.72);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    opacity: 1;
+    transition: opacity 0.4s ease;
+    overflow: hidden;
+    user-select: none;
 }
 
-#selfish-fs-close { position: absolute; top: 28px; right: 32px; width: 42px; height: 42px; border-radius: 50%; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); color: #ffffff; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; transition: opacity 0.8s ease, transform 0.3s ease, background 0.2s ease; }
-#selfish-fs-close:hover { background: var(--fs-accent, var(--selfish-accent)); transform: scale(1.08); }
-.selfish-fs-container { display: flex; align-items: center; justify-content: center; gap: 6vw; width: 85%; max-width: 1350px; z-index: 5; }
-.selfish-fs-cover-wrap { flex-shrink: 0; animation: selfishFloatingCover 6s ease-in-out infinite; }
+#selfish-fs-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+#selfish-fs-overlay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    backdrop-filter: blur(var(--selfish-blur));
+    -webkit-backdrop-filter: blur(var(--selfish-blur));
+    z-index: -1;
+}
+
+#selfish-fs-bg {
+    position: absolute;
+    top: -10%;
+    left: -10%;
+    width: 120%;
+    height: 120%;
+    background-size: cover;
+    background-position: center;
+    filter: blur(80px) brightness(0.45);
+    z-index: -2;
+    opacity: 0.92;
+    animation: selfishSlowPan 20s infinite alternate linear;
+}
+
+@keyframes selfishSlowPan {
+    0% {
+        transform: scale(1) translate(0, 0);
+    }
+
+    100% {
+        transform: scale(1.1) translate(-2%, 2%);
+    }
+}
+
+#selfish-fs-close {
+    position: absolute;
+    top: 70px;
+    right: 32px;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    transition: opacity 0.8s ease, transform 0.3s ease, background 0.2s ease;
+}
+
+#selfish-fs-close:hover {
+    background: var(--fs-accent, var(--selfish-accent));
+    transform: scale(1.08);
+}
+
+.selfish-fs-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6vw;
+    width: 85%;
+    max-width: 1350px;
+    z-index: 5;
+}
+
+.selfish-fs-cover-wrap {
+    flex-shrink: 0;
+    animation: selfishFloatingCover 6s ease-in-out infinite;
+}
 
 @keyframes selfishFloatingCover {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-16px); }
+
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-16px);
+    }
 }
 
 @keyframes selfishCoverGlow {
-    0% { box-shadow: 0 30px 60px rgba(0, 0, 0, 0.75), 0 0 18px var(--fs-accent, var(--selfish-accent)); }
-    100% { box-shadow: 0 30px 60px rgba(0, 0, 0, 0.75), 0 0 55px var(--fs-accent, var(--selfish-accent)); }
+    0% {
+        box-shadow: 0 30px 60px rgba(0, 0, 0, 0.75), 0 0 18px var(--fs-accent, var(--selfish-accent));
+    }
+
+    100% {
+        box-shadow: 0 30px 60px rgba(0, 0, 0, 0.75), 0 0 55px var(--fs-accent, var(--selfish-accent));
+    }
 }
 
-#selfish-fs-cover { width: 44vh; height: 44vh; max-width: 440px; max-height: 440px; border-radius: 24px; object-fit: cover; border: 1px solid rgba(255, 255, 255, 0.14); transform-style: preserve-3d; will-change: transform; transition: transform 0.12s ease-out; animation: selfishCoverGlow 4s infinite alternate ease-in-out; }
-.selfish-fs-info { display: flex; flex-direction: column; align-items: flex-start; max-width: 580px; width: 100%; }
-#selfish-fs-title { font-size: clamp(28px, 3.2vw, 52px); font-weight: 800; color: #ffffff; margin: 0 0 8px 0; line-height: 1.12; text-shadow: 0 10px 30px rgba(0, 0, 0, 0.8); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; transition: opacity 0.8s ease, transform 0.8s ease; }
-#selfish-fs-artist { font-size: clamp(16px, 1.4vw, 24px); color: rgba(255, 255, 255, 0.7); font-weight: 600; margin: 0 0 24px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; transition: opacity 0.8s ease, transform 0.8s ease; }
-#selfish-fs-vis-wrap { width: 100%; height: 74px; margin-bottom: 22px; transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
-#selfish-fs-visualizer { width: 100%; height: 100%; display: block; }
-.selfish-fs-progress-wrap { width: 100%; margin-bottom: 28px; transition: opacity 0.8s ease, transform 0.8s ease; }
-.selfish-fs-time-row { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; color: rgba(255, 255, 255, 0.6); margin-bottom: 8px; }
-#selfish-fs-progress { -webkit-appearance: none; width: 100%; height: 6px; border-radius: 4px; outline: none; cursor: pointer; background: linear-gradient(to right, var(--fs-accent, var(--selfish-accent)) var(--progress, 0%), rgba(255, 255, 255, 0.2) var(--progress, 0%)); }
-#selfish-fs-progress::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: #ffffff; box-shadow: 0 0 12px var(--fs-accent, var(--selfish-accent)); cursor: pointer; }
-.selfish-fs-controls { display: flex; align-items: center; gap: 34px; transition: opacity 0.8s ease, transform 0.8s ease; }
-.selfish-fs-ctrl-btn { background: none; border: none; color: rgba(255, 255, 255, 0.8); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.2s ease, color 0.2s ease; }
-.selfish-fs-ctrl-btn:hover { color: var(--fs-accent, var(--selfish-accent)); transform: scale(1.15); }
-.selfish-fs-play-btn { width: 64px; height: 64px; border-radius: 50%; background: #ffffff; color: #090514; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6); transition: transform 0.2s ease, box-shadow 0.2s ease; }
-.selfish-fs-play-btn:hover { transform: scale(1.07); box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7), 0 0 25px var(--fs-accent, var(--selfish-accent)); }
+#selfish-fs-cover {
+    width: 44vh;
+    height: 44vh;
+    max-width: 440px;
+    max-height: 440px;
+    border-radius: 24px;
+    object-fit: cover;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    transform-style: preserve-3d;
+    will-change: transform;
+    transition: transform 0.12s ease-out;
+    animation: selfishCoverGlow 4s infinite alternate ease-in-out;
+}
+
+.selfish-fs-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    max-width: 580px;
+    width: 100%;
+}
+
+#selfish-fs-title {
+    font-size: clamp(28px, 3.2vw, 52px);
+    font-weight: 800;
+    color: #ffffff;
+    margin: 0 0 8px 0;
+    line-height: 1.12;
+    text-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+#selfish-fs-artist {
+    font-size: clamp(16px, 1.4vw, 24px);
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 600;
+    margin: 0 0 24px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+#selfish-fs-vis-wrap {
+    width: 100%;
+    height: 74px;
+    margin-bottom: 22px;
+    transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#selfish-fs-visualizer {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.selfish-fs-progress-wrap {
+    width: 100%;
+    margin-bottom: 28px;
+    transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+.selfish-fs-time-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 8px;
+}
+
+#selfish-fs-progress {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: 4px;
+    outline: none;
+    cursor: pointer;
+    background: linear-gradient(to right, var(--fs-accent, var(--selfish-accent)) var(--progress, 0%), rgba(255, 255, 255, 0.2) var(--progress, 0%));
+}
+
+#selfish-fs-progress::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 0 12px var(--fs-accent, var(--selfish-accent));
+    cursor: pointer;
+}
+
+.selfish-fs-controls {
+    display: flex;
+    align-items: center;
+    gap: 34px;
+    transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+.selfish-fs-ctrl-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.8);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.selfish-fs-ctrl-btn:hover {
+    color: var(--fs-accent, var(--selfish-accent));
+    transform: scale(1.15);
+}
+
+.selfish-fs-play-btn {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: #ffffff;
+    color: #090514;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.selfish-fs-play-btn:hover {
+    transform: scale(1.07);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7), 0 0 25px var(--fs-accent, var(--selfish-accent));
+}
 
 #selfish-fs-overlay.fs-hide-ui #selfish-fs-close,
 #selfish-fs-overlay.fs-hide-ui #selfish-fs-title,
 #selfish-fs-overlay.fs-hide-ui #selfish-fs-artist,
 #selfish-fs-overlay.fs-hide-ui .selfish-fs-progress-wrap,
-#selfish-fs-overlay.fs-hide-ui .selfish-fs-controls { opacity: 0 !important; transform: translateY(18px); pointer-events: none; }
-#selfish-fs-overlay.fs-hide-ui #selfish-fs-vis-wrap { transform: translateY(-45px) scale(1.12); }
+#selfish-fs-overlay.fs-hide-ui .selfish-fs-controls {
+    opacity: 0 !important;
+    transform: translateY(18px);
+    pointer-events: none;
+}
+
+#selfish-fs-overlay.fs-hide-ui #selfish-fs-vis-wrap {
+    transform: translateY(-45px) scale(1.12);
+}

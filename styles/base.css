@@ -2,14 +2,19 @@
 .encore-dark-theme,
 .encore-dark-theme .encore-base-set {
     --selfish-bg: #090514;
-    --selfish-glass-bg: rgba(15, 8, 25, 0.55);
-    --selfish-glass-border: rgba(255, 255, 255, 0.1);
-    --selfish-card-bg: rgba(255, 255, 255, 0.04);
-    --selfish-card-hover: rgba(var(--selfish-accent-rgb), 0.14);
+    --selfish-glass-bg: rgba(15, 8, 25, 0.56);
+    --selfish-glass-border: rgba(255, 255, 255, 0.11);
+    --selfish-card-bg: rgba(255, 255, 255, 0.045);
+    --selfish-card-hover: rgba(var(--selfish-accent-rgb), 0.15);
     --selfish-accent: #b026ff;
+    --selfish-accent-2: #ff2a85;
+    --selfish-accent-bg: #b026ff;
     --selfish-accent-rgb: 176, 38, 255;
+    --selfish-accent-2-rgb: 255, 42, 133;
     --selfish-accent-glow: 0 0 15px rgba(var(--selfish-accent-rgb), 0.6);
     --selfish-blur: 20px;
+    --selfish-backdrop: blur(20px);
+    --panel-gap: 10px !important;
 
     --spice-text: #ffffff !important;
     --spice-subtext: #b3b3b3 !important;
@@ -26,8 +31,8 @@
     --background-base: #090514 !important;
     --background-highlight: rgba(255, 255, 255, 0.08) !important;
     --background-press: rgba(255, 255, 255, 0.14) !important;
-    --background-elevated-base: rgba(18, 10, 32, 0.9) !important;
-    --background-elevated-highlight: rgba(32, 16, 56, 0.94) !important;
+    --background-elevated-base: rgba(18, 10, 32, 0.92) !important;
+    --background-elevated-highlight: rgba(32, 16, 56, 0.95) !important;
     --essential-bright-accent: var(--selfish-accent) !important;
     --text-bright-accent: var(--selfish-accent) !important;
 }
@@ -39,34 +44,87 @@
 }
 
 .Root__top-container {
+    position: relative !important;
+    isolation: isolate !important;
     background-color: var(--selfish-bg) !important;
     background-image: linear-gradient(-45deg, #090514, #15092e, #240c42, #0d0518) !important;
     background-size: 400% 400% !important;
     animation: selfishLiquidBg 15s ease infinite !important;
+    --panel-gap: 10px !important;
     gap: 10px !important;
     padding: 10px !important;
 }
 
 .Root__top-container.has-custom-bg {
     animation: none !important;
+    background-image: none !important;
+    background-color: var(--selfish-bg) !important;
+}
+
+#selfish-bg-stage {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: -1 !important;
+    background-color: var(--selfish-bg) !important;
+    pointer-events: none !important;
+    overflow: hidden !important;
+    transform: translate3d(0, 0, 0) !important;
+}
+
+.selfish-bg-slide {
+    position: absolute !important;
+    inset: 0 !important;
     background-size: cover !important;
     background-position: center !important;
     background-repeat: no-repeat !important;
+    opacity: 0;
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    will-change: opacity;
 }
 
-/* Скляні панелі: розмиття винесено в ::before, щоб не ламати mask-image у текстах */
+/* Скляні плити: overflow: visible на вертикальних панелях прибирає перерахунок маски blur при ресайзі */
 .Root__nav-bar,
 .Root__main-view,
-.Root__right-sidebar,
-.Root__now-playing-bar {
+.Root__right-sidebar {
+    --background-base: transparent !important;
+    --spice-main: transparent !important;
+    --spice-sidebar: transparent !important;
+    box-sizing: border-box !important;
     position: relative !important;
     isolation: isolate !important;
+    min-width: 0 !important;
+    overflow: visible !important;
     background: transparent !important;
     border: 1px solid var(--selfish-glass-border) !important;
     border-radius: 16px !important;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4) !important;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease !important;
 }
 
+.Root__now-playing-bar {
+    --background-base: transparent !important;
+    --spice-main: transparent !important;
+    --spice-sidebar: transparent !important;
+    box-sizing: border-box !important;
+    position: relative !important;
+    isolation: isolate !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    background: transparent !important;
+    border: 1px solid var(--selfish-glass-border) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4) !important;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease !important;
+}
+
+body.selfish-resizing .Root__nav-bar,
+body.selfish-resizing .Root__main-view,
+body.selfish-resizing .Root__right-sidebar {
+    transition: none !important;
+}
+
+/* Основний шар матового скла: contain ізолює його від внутрішніх перебудов тексту при ресайзі */
 .Root__nav-bar::before,
 .Root__main-view::before,
 .Root__right-sidebar::before,
@@ -77,11 +135,56 @@
     z-index: -1 !important;
     border-radius: inherit !important;
     background: var(--selfish-glass-bg) !important;
-    backdrop-filter: blur(var(--selfish-blur)) !important;
-    -webkit-backdrop-filter: blur(var(--selfish-blur)) !important;
+    backdrop-filter: blur(var(--selfish-blur)) saturate(var(--selfish-glass-sat, 115%)) !important;
+    -webkit-backdrop-filter: blur(var(--selfish-blur)) saturate(var(--selfish-glass-sat, 115%)) !important;
+    contain: layout paint style !important;
     pointer-events: none !important;
 }
 
+/* Оптичний фацет та внутрішні каустики скла */
+.Root__nav-bar::after,
+.Root__main-view::after,
+.Root__right-sidebar::after,
+.Root__now-playing-bar::after {
+    content: "" !important;
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: 2 !important;
+    border-radius: inherit !important;
+    background:
+        radial-gradient(
+            120% 75% at 12% 0%,
+            rgba(255, 255, 255, var(--selfish-refraction-caustic, 0)) 0%,
+            transparent 58%
+        ),
+        linear-gradient(
+            135deg,
+            rgba(var(--selfish-accent-rgb), var(--selfish-refraction-dispersion, 0)) 0%,
+            transparent 35%,
+            transparent 68%,
+            rgba(var(--selfish-accent-2-rgb), var(--selfish-refraction-dispersion, 0)) 100%
+        ) !important;
+    box-shadow:
+        inset 0 1px 0 var(--selfish-refraction-rim, rgba(255, 255, 255, 0.08)),
+        inset 1px 0 0 rgba(255, 255, 255, calc(var(--selfish-refraction-caustic, 0) * 0.65)),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.28) !important;
+    contain: layout paint style !important;
+    pointer-events: none !important;
+}
+
+/* Обрізаємо внутрішній контент за заокругленнями на дочірніх контейнерах */
+.Root__nav-bar > nav,
+.Root__main-view > .main-view-container,
+.Root__right-sidebar > aside,
+.Root__right-sidebar > [data-testid="NPV_Panel_OpenDiv"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    overflow: hidden !important;
+    border-radius: inherit !important;
+}
+
+/* Очищаємо всі вбудовані градієнти та липкі підкладки всередині панелей */
 .Root__globalNav,
 .main-yourLibraryX-entryPoints,
 .main-yourLibraryX-libraryContainer,
@@ -92,11 +195,12 @@
 .main-entityHeader-backgroundColor,
 .main-actionBarBackground-background,
 aside[aria-label] > div,
-.Root__right-sidebar > div,
+aside[aria-label] header,
 .Root__right-sidebar aside,
+.Root__right-sidebar aside header,
+.Root__right-sidebar [class*="nowPlayingView-header"],
 .Root__right-sidebar [data-testid="NPV_Panel_OpenDiv"],
-.Root__right-sidebar [data-testid="NPV_Panel_OpenDiv"] > div,
-.Root__right-sidebar [data-testid="NPV_Panel_OpenDiv"] > div > div,
+.Root__right-sidebar [data-testid="NPV_Panel_OpenDiv"] div:not([class*="section"]):not([data-testid="credits-card"]),
 .Root__right-sidebar .os-host,
 .Root__right-sidebar .os-padding,
 .Root__right-sidebar .os-viewport,
@@ -114,22 +218,47 @@ aside[aria-label] > div,
     background-image: none !important;
 }
 
+.Root__right-sidebar [data-testid="NPV_Panel_OpenDiv"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+}
+
 .main-card-card,
 .view-homeShortcutsGrid-shortcut,
 [data-testid="NPV_Panel_OpenDiv"] section {
     background: var(--selfish-card-bg) !important;
     border: 1px solid rgba(255, 255, 255, 0.06) !important;
     border-radius: 12px !important;
-    transition: background 0.2s ease, border-color 0.2s ease !important;
+    transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), background 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease !important;
 }
 
 .main-card-card:hover,
 .view-homeShortcutsGrid-shortcut:hover {
-    background: var(--selfish-card-hover) !important;
-    border-color: rgba(var(--selfish-accent-rgb), 0.4) !important;
+    background: linear-gradient(135deg, rgba(var(--selfish-accent-rgb), 0.16), rgba(var(--selfish-accent-2-rgb), 0.12)) !important;
+    border-color: rgba(var(--selfish-accent-rgb), 0.45) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25) !important;
 }
 
-::-webkit-scrollbar { width: 6px !important; height: 6px !important; }
-::-webkit-scrollbar-track { background: transparent !important; }
-::-webkit-scrollbar-thumb { background: rgba(var(--selfish-accent-rgb), 0.35) !important; border-radius: 999px !important; }
-::-webkit-scrollbar-thumb:hover { background: rgba(var(--selfish-accent-rgb), 0.75) !important; }
+/* Акуратний скролбар без темної смужки по краю панелі */
+::-webkit-scrollbar {
+    width: 5px !important;
+    height: 5px !important;
+}
+
+::-webkit-scrollbar-track,
+.os-scrollbar-track {
+    background: transparent !important;
+}
+
+::-webkit-scrollbar-thumb,
+.os-scrollbar-handle {
+    background: var(--selfish-accent-bg, rgba(var(--selfish-accent-rgb), 0.45)) !important;
+    border-radius: 999px !important;
+}
+
+::-webkit-scrollbar-thumb:hover,
+.os-scrollbar-handle:hover {
+    filter: brightness(1.15);
+}
